@@ -27,7 +27,7 @@ func printHelp(err error) {
 		fmt.Printf("Error: %s\n\n", err)
 	}
 	sps := strings.Split(os.Args[0], "/")
-	fmt.Printf(`Usage: %s <action> [flags] [branch]
+	fmt.Printf(`Usage: %s [flags] <action> [branch]
 
 Actions:
 log  - log all chains in repo (provide branch to limit)
@@ -71,6 +71,7 @@ func main() {
 		chains = map[string][]*github.PullRequest{"": chain}
 	}
 
+	// TODO add auto rebasing for all items in chain
 	action := args[0]
 	switch action {
 	case "log":
@@ -82,6 +83,7 @@ func main() {
 	}
 }
 
+// TODO handle pagination
 func getPRs(org, repo string) ([]*github.PullRequest, error) {
 	client := github.NewClient(nil)
 
@@ -94,6 +96,7 @@ func getPRs(org, repo string) ([]*github.PullRequest, error) {
 
 }
 
+// TODO add option to filter by url or pr number
 func findChainWithBranch(chains map[string][]*github.PullRequest, branch string) []*github.PullRequest {
 	for _, chain := range chains {
 		for _, pr := range chain {
