@@ -74,26 +74,26 @@ func main() {
 		branch = args[1]
 	}
 
-	chains := findChains("main", prs) // TODO: master
+	basePRMap := getBasePRMap(base, prs)
 
 	if branch != "" {
-		chain := findChainWithBranch(chains, branch)
-		chains = map[string][]*github.PullRequest{"": chain}
+		basePRMap = filterPRsWithBranch(base, branch, basePRMap)
 	}
 
-	// TODO add auto rebasing for all items in chain
+	// TODO: add auto rebasing for all items in chain
 	action := args[0]
 	switch action {
 	case "log":
-		printChains(chains)
+		printChains(base, basePRMap)
 	case "open":
-		openChainsLinks(chains)
+		printChains(base, basePRMap)
+		openChainsLinks(base, basePRMap)
 	default:
 		printHelp(fmt.Errorf("unknown action %s", action))
 	}
 }
 
-// TODO handle pagination
+// TODO: handle pagination
 func getPRs(org, repo string, client *github.Client) ([]*github.PullRequest, error) {
 	prs, _, err := client.PullRequests.List(context.Background(), org, repo, nil)
 	if err != nil {
@@ -104,87 +104,113 @@ func getPRs(org, repo string, client *github.Client) ([]*github.PullRequest, err
 
 }
 
-// TODO add option to filter by url or pr number
-func findChainWithBranch(chains map[string][]*github.PullRequest, branch string) []*github.PullRequest {
-	for _, chain := range chains {
-		for _, pr := range chain {
-			if *pr.Head.Ref == branch {
-				return chain
-			}
+// TODO: add option to filter by url or pr number
+func filterPRsWithBranch(
+	base, branch string,
+	basePRMap map[string][]*github.PullRequest,
+) map[string][]*github.PullRequest {
+	if base == branch {
+		return basePRMap
+	}
+
+	filteredBasePrs := []*github.PullRequest{}
+	for _, pr := range basePRMap[base] {
+		if *pr.Head.Ref == branch {
+			filteredBasePrs = append(filteredBasePrs, pr)
+			continue
+		}
+
+		if hasBranch(*pr.Head.Ref, branch, basePRMap) {
+			filteredBasePrs = append(filteredBasePrs, pr)
 		}
 	}
 
-	return nil
+	// TODO: remove inaccessible prs
+	basePRMap[base] = filteredBasePrs
+
+	return basePRMap
 }
 
-func findChains(base string, prs []*github.PullRequest) map[string][]*github.PullRequest {
-	basePRMap := map[string]*github.PullRequest{}
-	headPRMap := map[string]*github.PullRequest{}
-	starts := []string{}
+func hasBranch(start, branch string, basePRMap map[string][]*github.PullRequest) bool {
+	prs := basePRMap[start]
+
+	for _, pr := range prs {
+		if *pr.Head.Ref == branch {
+			return true
+		}
+
+		if hasBranch(*pr.Head.Ref, branch, basePRMap) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// getBasePRMap returns a map from the base branch of prs to the
+// prs. This can be used to find chains.
+func getBasePRMap(base string, prs []*github.PullRequest) map[string][]*github.PullRequest {
+	basePRMap := map[string][]*github.PullRequest{}
 	for _, pr := range prs {
 		if pr.Base.Ref == nil || pr.Head.Ref == nil {
 			continue
 		}
 
-		headPRMap[*pr.Head.Ref] = pr
+		basePRMap[*pr.Base.Ref] = append(basePRMap[*pr.Base.Ref], pr)
+	}
 
-		if *pr.Base.Ref == base {
-			starts = append(starts, *pr.Head.Ref)
-		} else {
-			basePRMap[*pr.Base.Ref] = pr
+	// filer out branches with only one pr
+	filteredBasePRs := []*github.PullRequest{}
+	for _, pr := range basePRMap[base] {
+		_, ok := basePRMap[*pr.Head.Ref]
+		if ok {
+			filteredBasePRs = append(filteredBasePRs, pr)
 		}
 	}
 
-	chains := map[string][]*github.PullRequest{}
-	for _, start := range starts {
-		sp := headPRMap[start]
-		chains[start] = []*github.PullRequest{sp}
+	basePRMap[base] = filteredBasePRs
 
-		var ok bool
-		for {
-			sp, ok = basePRMap[*sp.Head.Ref]
-			if !ok {
-				break
-			}
-
-			chains[start] = append(chains[start], sp)
-		}
-	}
-
-	for base, chain := range chains {
-		if len(chain) == 1 {
-			delete(chains, base)
-		}
-	}
-
-	return chains
+	return basePRMap
 }
 
-func printChains(chains map[string][]*github.PullRequest) {
-	for _, chain := range chains {
-		for i, pr := range chain {
-			fmt.Printf(
-				"%s[#%s] %s (%s) <%s>\n",
-				strings.Repeat("\t", i),
-				strconv.Itoa(*pr.Number),
-				*pr.Title,
-				*pr.Head.Ref,
-				*pr.User.Login,
-			)
-		}
+func printChains(base string, basePRMap map[string][]*github.PullRequest) {
+	printChainLevel(base, 0, basePRMap)
+}
 
-		fmt.Println()
+func printChainLevel(base string, level int, basePRMap map[string][]*github.PullRequest) {
+	for _, pr := range basePRMap[base] {
+		fmt.Println(formatPR(level, pr))
+		printChainLevel(*pr.Head.Ref, level+1, basePRMap)
+
+		if level == 0 {
+			fmt.Println()
+		}
 	}
 }
 
-func openChainsLinks(chains map[string][]*github.PullRequest) {
-	for _, chain := range chains {
-		for _, pr := range chain {
-			fmt.Println("Opening", *pr.HTMLURL)
-			err := openBrowser(*pr.HTMLURL)
-			if err != nil {
-				printHelp(err)
-			}
+func formatPR(level int, pr *github.PullRequest) string {
+	return fmt.Sprintf(
+		"%s[#%s] %s (%s) <%s>",
+		strings.Repeat("\t", level),
+		strconv.Itoa(*pr.Number),
+		*pr.Title,
+		*pr.Head.Ref,
+		*pr.User.Login,
+	)
+}
+
+func openChainsLinks(base string, basePRMap map[string][]*github.PullRequest) {
+	prs, ok := basePRMap[base]
+	if !ok {
+		return
+	}
+
+	for _, pr := range prs {
+		err := openBrowser(*pr.HTMLURL)
+		if err != nil {
+			printHelp(err)
 		}
+
+		openChainsLinks(*pr.Head.Ref, basePRMap)
 	}
 }
