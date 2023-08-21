@@ -10,10 +10,39 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/tcnksm/go-gitconfig"
 )
 
 func parseOrgAndRepo(repo string) (string, string, error) {
-	// TODO: if repo is empty, read current repo from git config file
+	if repo == "" {
+		url, err := gitconfig.OriginURL()
+		if err != nil {
+			return "", "", fmt.Errorf("unable to read gitconfig: %s", err)
+		}
+
+		if strings.HasPrefix(url, "git@") {
+			url = strings.TrimSuffix(url, ".git")
+			splits := strings.Split(url, ":")
+			if len(splits) != 2 {
+				return "", "", errors.New("invalid repo url format")
+			}
+
+			splits = strings.Split(splits[1], "/")
+
+			return splits[0], splits[1], nil
+		}
+
+		if strings.HasPrefix(url, "https://") {
+			url = strings.TrimSuffix(url, ".git")
+			splits := strings.Split(url, "/")
+			if len(splits) != 5 {
+				return "", "", errors.New("invalid repo url format")
+			}
+
+			return splits[3], splits[4], nil
+		}
+	}
+
 	splits := strings.Split(repo, "/")
 	if len(splits) != 2 {
 		return "", "", errors.New("invalid repo format")
