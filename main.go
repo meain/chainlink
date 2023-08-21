@@ -54,7 +54,17 @@ func main() {
 		printHelp(err)
 	}
 
-	prs, err := getPRs(org, repo)
+	client := github.NewClient(nil)
+
+	// get the name of the base branch from gh api
+	r, _, err := client.Repositories.Get(context.Background(), org, repo)
+	if err != nil {
+		printHelp(fmt.Errorf("unable to get repo: %s", err))
+	}
+
+	base := *r.DefaultBranch
+
+	prs, err := getPRs(org, repo, client)
 	if err != nil {
 		printHelp(err)
 	}
@@ -84,9 +94,7 @@ func main() {
 }
 
 // TODO handle pagination
-func getPRs(org, repo string) ([]*github.PullRequest, error) {
-	client := github.NewClient(nil)
-
+func getPRs(org, repo string, client *github.Client) ([]*github.PullRequest, error) {
 	prs, _, err := client.PullRequests.List(context.Background(), org, repo, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get pull requests: %s", err)
