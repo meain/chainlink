@@ -56,11 +56,13 @@ func printHelp(err error) {
 		fmt.Printf("Error: %s\n\n", err)
 	}
 	sps := strings.Split(os.Args[0], "/")
-	fmt.Printf(`Usage: %s [flags] <action> [branch]
+	fmt.Printf(`Usage: %s [flags] <action> [filter:branch|number]
 
 Actions:
-log  - log all chains in repo (provide branch to limit)
-open - open all links in a chain (provide any branch in chain)
+log  - log all chains in repo
+open - open all links in a chain
+
+You can provider branch name or pr number to filter the chains.
 
 Flags:
 `,
@@ -98,15 +100,15 @@ func main() {
 		printHelp(err)
 	}
 
-	branch := ""
+	filter := ""
 	if len(args) == 2 {
-		branch = args[1]
+		filter = args[1]
 	}
 
 	basePRMap := getBasePRMap(base, prs)
 
-	if branch != "" {
-		basePRMap = filterPRsWithBranch(base, branch, basePRMap)
+	if filter != "" {
+		basePRMap = filterPRs(base, filter, basePRMap)
 	}
 
 	// TODO: add auto rebasing for all items in chain
@@ -133,23 +135,22 @@ func getPRs(org, repo string, client *github.Client) ([]*github.PullRequest, err
 
 }
 
-// TODO: add option to filter by url or pr number
-func filterPRsWithBranch(
-	base, branch string,
+func filterPRs(
+	base, filter string,
 	basePRMap map[string][]*github.PullRequest,
 ) map[string][]*github.PullRequest {
-	if base == branch {
+	if base == filter {
 		return basePRMap
 	}
 
 	filteredBasePrs := []*github.PullRequest{}
 	for _, pr := range basePRMap[base] {
-		if *pr.Head.Ref == branch {
+		if *pr.Head.Ref == filter || strconv.Itoa(*pr.Number) == filter {
 			filteredBasePrs = append(filteredBasePrs, pr)
 			continue
 		}
 
-		if hasBranch(*pr.Head.Ref, branch, basePRMap) {
+		if hasBranch(*pr.Head.Ref, filter, basePRMap) {
 			filteredBasePrs = append(filteredBasePrs, pr)
 		}
 	}
