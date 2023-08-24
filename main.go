@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -73,11 +74,23 @@ Flags:
 
 func main() {
 	or := flag.String("repo", "", "repo to work on (eg: meain/chainlink)")
+	om := flag.String("output", "plain", "format for output (options: plain, fancy)")
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) != 1 && len(args) != 2 {
+
+	action := "log"
+	if len(args) > 0 {
+		action = args[0]
+	}
+
+	if action == "help" {
+		// doing it early to avoid pulling prs
 		printHelp(nil)
+	}
+
+	if strings.ToLower(*om) != "plain" && strings.ToLower(*om) != "fancy" {
+		printHelp(fmt.Errorf("invalid output mode %s", *om))
 	}
 
 	org, repo, err := parseOrgAndRepo(*or)
@@ -94,8 +107,9 @@ func main() {
 	}
 
 	base := *r.DefaultBranch
+	ctx := context.Background()
 
-	prs, err := getPRs(org, repo, client)
+	prs, err := getPRs(ctx, org, repo, client)
 	if err != nil {
 		printHelp(err)
 	}
@@ -112,12 +126,11 @@ func main() {
 	}
 
 	// TODO: add auto rebasing for all items in chain
-	action := args[0]
 	switch action {
 	case "log":
-		printChains(base, basePRMap)
+		printChains(ctx, client, base, basePRMap, *om)
 	case "open":
-		printChains(base, basePRMap)
+		printChains(ctx, client, base, basePRMap, *om)
 		openChainsLinks(base, basePRMap)
 	default:
 		printHelp(fmt.Errorf("unknown action %s", action))
@@ -125,8 +138,8 @@ func main() {
 }
 
 // TODO: handle pagination
-func getPRs(org, repo string, client *github.Client) ([]*github.PullRequest, error) {
-	prs, _, err := client.PullRequests.List(context.Background(), org, repo, nil)
+func getPRs(ctx context.Context, org, repo string, client *github.Client) ([]*github.PullRequest, error) {
+	prs, _, err := client.PullRequests.List(ctx, org, repo, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get pull requests: %s", err)
 	}
@@ -203,14 +216,32 @@ func getBasePRMap(base string, prs []*github.PullRequest) map[string][]*github.P
 	return basePRMap
 }
 
-func printChains(base string, basePRMap map[string][]*github.PullRequest) {
-	printChainLevel(base, 0, basePRMap)
+func printChains(
+	ctx context.Context,
+	client *github.Client,
+	base string,
+	basePRMap map[string][]*github.PullRequest,
+	outputMode string,
+) {
+	printChainLevel(ctx, client, base, 0, basePRMap, outputMode)
 }
 
-func printChainLevel(base string, level int, basePRMap map[string][]*github.PullRequest) {
+func printChainLevel(
+	ctx context.Context,
+	client *github.Client,
+	base string,
+	level int,
+	basePRMap map[string][]*github.PullRequest,
+	outputMode string,
+) {
 	for _, pr := range basePRMap[base] {
-		fmt.Println(formatPR(level, pr))
-		printChainLevel(*pr.Head.Ref, level+1, basePRMap)
+		approvedBy, err := reviewers(ctx, client, pr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(formatPR(outputMode, level, pr, approvedBy))
+		printChainLevel(ctx, client, *pr.Head.Ref, level+1, basePRMap, outputMode)
 
 		if level == 0 {
 			fmt.Println()
@@ -218,15 +249,66 @@ func printChainLevel(base string, level int, basePRMap map[string][]*github.Pull
 	}
 }
 
-func formatPR(level int, pr *github.PullRequest) string {
-	return fmt.Sprintf(
-		"%s[#%s] %s (%s) <%s>",
-		strings.Repeat("\t", level),
-		strconv.Itoa(*pr.Number),
-		*pr.Title,
-		*pr.Head.Ref,
-		*pr.User.Login,
+func reviewers(ctx context.Context, client *github.Client, pr *github.PullRequest) ([]string, error) {
+	reviews, _, err := client.PullRequests.ListReviews(
+		ctx,
+		pr.Base.Repo.Owner.GetLogin(),
+		pr.Base.Repo.GetName(),
+		*pr.Number,
+		nil,
 	)
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to get reviews: %s", err)
+	}
+
+	// TODO: add review requested from names if not approved
+	approvedBy := []string{}
+	for _, review := range reviews {
+		if review.GetState() == "APPROVED" {
+			approvedBy = append(approvedBy, review.GetUser().GetLogin())
+		}
+	}
+
+	return approvedBy, nil
+}
+
+func formatPR(mode string, level int, pr *github.PullRequest, approvedBy []string) string {
+	switch mode {
+	case "fancy":
+		approval := "🔃"
+		if len(approvedBy) > 0 {
+			approval = "✅ " + strings.Join(approvedBy, ", ")
+		}
+
+		return fmt.Sprintf(
+			"%s[#%s] %s (%s)\n%s 🙇 %s 🔗 %s %s\n",
+			strings.Repeat("\t", level),
+			strconv.Itoa(*pr.Number),
+			*pr.Title,
+			*pr.Head.Ref,
+			strings.Repeat("\t", level),
+			*pr.User.Login,
+			*pr.State,
+			approval,
+		)
+	default:
+		approval := "not approved"
+		if len(approvedBy) > 0 {
+			approval = "approved"
+		}
+
+		return fmt.Sprintf(
+			"%s[#%s] %s (%s) <%s> [%s:%s]",
+			strings.Repeat("\t", level),
+			strconv.Itoa(*pr.Number),
+			*pr.Title,
+			*pr.Head.Ref,
+			*pr.User.Login,
+			*pr.State,
+			approval,
+		)
+	}
 }
 
 func openChainsLinks(base string, basePRMap map[string][]*github.PullRequest) {
