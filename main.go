@@ -6,12 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/tcnksm/go-gitconfig"
+	"golang.org/x/oauth2"
 )
 
 func parseOrgAndRepo(repo string) (string, string, error) {
@@ -53,6 +55,14 @@ func parseOrgAndRepo(repo string) (string, string, error) {
 }
 
 func printHelp(err error) {
+	// check for api rate limit error
+	if strings.Contains(err.Error(), "403 API rate limit exceeded") {
+		fmt.Println("Error: API rate limit exceeded")
+		fmt.Println("You can increase the limit by setting the GITHUB_TOKEN env variable")
+		fmt.Println("See https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token")
+		os.Exit(1)
+	}
+
 	if err != nil {
 		fmt.Printf("Error: %s\n\n", err)
 	}
@@ -98,7 +108,17 @@ func main() {
 		printHelp(err)
 	}
 
-	client := github.NewClient(nil)
+	var tc *http.Client
+
+	if os.Getenv("GITHUB_TOKEN") != "" {
+		ctx := context.Background()
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
+		)
+		tc = oauth2.NewClient(ctx, ts)
+	}
+
+	client := github.NewClient(tc)
 
 	// get the name of the base branch from gh api
 	r, _, err := client.Repositories.Get(context.Background(), org, repo)
