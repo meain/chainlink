@@ -32,5 +32,19 @@ $ chainlink -repo alcionai/corso log
 
 
 $ chainlink -repo alcionai/corso open group-cli
+
 Opening https://github.com/alcionai/corso/pull/4030
 Opening https://github.com/alcionai/corso/pull/4043
+
+$ chainlink rebase 3217-model-mod-time | tee /dev/stderr | bash
+
+set -ex
+git checkout 3217-incomplete-backup-cleanup
+git rebase main
+git push --force-with-lease
+git checkout 3217-model-mod-time
+git rebase 3217-incomplete-backup-cleanup
+git push --force-with-lease
+git checkout 3217-delay-model-gc
+git rebase 3217-model-mod-time
+git push --force-with-lease

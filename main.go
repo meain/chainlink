@@ -72,6 +72,7 @@ func printHelp(err error) {
 Actions:
 log  - log all chains in repo
 open - open all links in a chain
+rebase - give command to rebase all prs in chain
 
 You can provider branch name or pr number to filter the chains.
 
@@ -134,6 +135,10 @@ func main() {
 		printHelp(err)
 	}
 
+	if action == "rebase" && len(args) < 2 {
+		printHelp(fmt.Errorf("rebase action requires a filter"))
+	}
+
 	filter := ""
 	if len(args) == 2 {
 		filter = args[1]
@@ -149,6 +154,8 @@ func main() {
 	switch action {
 	case "log":
 		printChains(ctx, client, base, basePRMap, *om)
+	case "rebase":
+		rebaseChains(ctx, base, basePRMap)
 	case "open":
 		printChains(ctx, client, base, basePRMap, *om)
 		openChainsLinks(base, basePRMap)
@@ -234,6 +241,30 @@ func getBasePRMap(base string, prs []*github.PullRequest) map[string][]*github.P
 	basePRMap[base] = filteredBasePRs
 
 	return basePRMap
+}
+
+func rebaseChains(
+	ctx context.Context,
+	base string,
+	basePRMap map[string][]*github.PullRequest,
+) {
+	if len(basePRMap[base]) != 0 {
+		fmt.Println("set -ex")
+	}
+	rebaseChainsInner(ctx, basePRMap, base)
+}
+
+func rebaseChainsInner(
+	ctx context.Context,
+	basePRMap map[string][]*github.PullRequest,
+	base string,
+) {
+	for _, pr := range basePRMap[base] {
+		fmt.Printf("git checkout %s\n", *pr.Head.Ref)
+		fmt.Printf("git rebase %s\n", *pr.Base.Ref)
+		fmt.Printf("git push --force-with-lease\n")
+		rebaseChains(ctx, *pr.Head.Ref, basePRMap)
+	}
 }
 
 func printChains(
