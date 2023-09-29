@@ -251,19 +251,19 @@ func rebaseChains(
 	if len(basePRMap[base]) != 0 {
 		fmt.Println("set -ex")
 	}
-	rebaseChainsInner(ctx, basePRMap, base)
+	rebaseChainsInner(ctx, base, basePRMap)
 }
 
 func rebaseChainsInner(
 	ctx context.Context,
-	basePRMap map[string][]*github.PullRequest,
 	base string,
+	basePRMap map[string][]*github.PullRequest,
 ) {
 	for _, pr := range basePRMap[base] {
 		fmt.Printf("git checkout %s\n", *pr.Head.Ref)
 		fmt.Printf("git rebase %s\n", *pr.Base.Ref)
 		fmt.Printf("git push --force-with-lease\n")
-		rebaseChains(ctx, *pr.Head.Ref, basePRMap)
+		rebaseChainsInner(ctx, *pr.Head.Ref, basePRMap)
 	}
 }
 
