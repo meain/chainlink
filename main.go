@@ -261,7 +261,7 @@ func rebaseChainsInner(
 ) {
 	for _, pr := range basePRMap[base] {
 		fmt.Printf("git checkout %s\n", *pr.Head.Ref)
-		fmt.Printf("git rebase %s\n", *pr.Base.Ref)
+		fmt.Printf("git rebase --update-refs %s\n", *pr.Base.Ref)
 		fmt.Printf("git push --force-with-lease\n")
 		rebaseChainsInner(ctx, *pr.Head.Ref, basePRMap)
 	}
