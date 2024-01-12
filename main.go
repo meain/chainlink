@@ -86,9 +86,12 @@ Flags:
 func main() {
 	or := flag.String("repo", "", "repo to work on (eg: meain/chainlink)")
 	om := flag.String("output", "plain", "format for output (options: plain, fancy)")
+	noPush := flag.Bool("no-push", false, "push rebased branches")
 	flag.Parse()
 
 	args := flag.Args()
+
+	push := !*noPush
 
 	action := "log"
 	if len(args) > 0 {
@@ -155,7 +158,7 @@ func main() {
 	case "log":
 		printChains(ctx, client, base, basePRMap, *om)
 	case "rebase":
-		rebaseChains(ctx, base, basePRMap)
+		rebaseChains(ctx, base, basePRMap, push)
 	case "open":
 		printChains(ctx, client, base, basePRMap, *om)
 		openChainsLinks(base, basePRMap)
@@ -247,23 +250,28 @@ func rebaseChains(
 	ctx context.Context,
 	base string,
 	basePRMap map[string][]*github.PullRequest,
+	push bool,
 ) {
 	if len(basePRMap[base]) != 0 {
 		fmt.Println("set -ex")
 	}
-	rebaseChainsInner(ctx, base, basePRMap)
+	rebaseChainsInner(ctx, base, basePRMap, push)
 }
 
 func rebaseChainsInner(
 	ctx context.Context,
 	base string,
 	basePRMap map[string][]*github.PullRequest,
+	push bool,
 ) {
 	for _, pr := range basePRMap[base] {
 		fmt.Printf("git checkout %s\n", *pr.Head.Ref)
 		fmt.Printf("git rebase --update-refs %s\n", *pr.Base.Ref)
-		fmt.Printf("git push --force-with-lease\n")
-		rebaseChainsInner(ctx, *pr.Head.Ref, basePRMap)
+
+		if push {
+			fmt.Printf("git push --force-with-lease\n")
+		}
+		rebaseChainsInner(ctx, *pr.Head.Ref, basePRMap, push)
 	}
 }
 
