@@ -39,4 +39,13 @@ type Response struct {
 			} `json:"pullRequests"`
 		} `json:"repository"`
 	} `json:"data"`
+	Errors []struct {
+		Type      string   `json:"type"`
+		Path      []string `json:"path"`
+		Locations []struct {
+			Line   int `json:"line"`
+			Column int `json:"column"`
+		} `json:"locations"`
+		Message string `json:"message"`
+	} `json:"errors"`
 }

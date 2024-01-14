@@ -132,6 +132,13 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 		return d, fmt.Errorf("unable to marshal response: %v", err)
 	}
 
+	if len(resp.Errors) > 0 {
+		for _, e := range resp.Errors {
+			fmt.Println(e.Message)
+		}
+		return d, fmt.Errorf("unable to fetch PRs")
+	}
+
 	d.defaultBranch = resp.Data.Repository.DefaultBranchRef.Name
 	d.url = resp.Data.Repository.URL
 	d.branch[resp.Data.Repository.DefaultBranchRef.Name] = 0
