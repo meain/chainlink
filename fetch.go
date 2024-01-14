@@ -52,7 +52,7 @@ func getToken() (string, error) {
 		return token, nil
 	}
 
-	return "", fmt.Errorf("missing token")
+	return "", fmt.Errorf("missing GitHub token in CHAINLINK_TOKEN")
 }
 
 func fetchData(org, repo string, cache bool) ([]byte, error) {

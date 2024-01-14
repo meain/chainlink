@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/tcnksm/go-gitconfig"
 	"golang.org/x/net/context"
 )
 
@@ -34,14 +35,46 @@ var CLI struct {
 	NoCache bool   `help:"Ignore cache (cached for 1m)"` // TODO: not sure if cache will be a bad idea
 }
 
-// TODO: Automatically fetch repo from .git/config
 func getOrgRepo(arg string) (string, string, error) {
-	splits := strings.Split(arg, "/")
-	if len(splits) != 2 {
-		return "", "", fmt.Errorf("unknown repo format: %s", arg)
+	if len(arg) > 0 {
+		splits := strings.Split(arg, "/")
+		if len(splits) != 2 {
+			return "", "", fmt.Errorf("unknown repo format: %s", arg)
+		}
+
+		return splits[0], splits[1], nil
 	}
 
-	return splits[0], splits[1], nil
+	url, err := gitconfig.OriginURL()
+	if err != nil {
+		return "", "", fmt.Errorf("unable to read url in gitconfig: %v", err)
+	}
+
+	if strings.HasPrefix(url, "git@") {
+		url = strings.TrimSuffix(url, ".git")
+
+		splits := strings.Split(url, ":")
+		if len(splits) != 2 {
+			return "", "", fmt.Errorf("invalid repo url format %s", url)
+		}
+
+		splits = strings.Split(splits[1], "/")
+		return splits[0], splits[1], nil
+	}
+
+	if strings.HasPrefix(url, "https://") {
+		url = strings.TrimSuffix(url, ".git")
+
+		splits := strings.Split(url, "/")
+		if len(splits) != 5 {
+			return "", "", fmt.Errorf("invalid repo url format %s", url)
+		}
+
+		return splits[3], splits[4], nil
+	}
+
+	return "", "", fmt.Errorf("could not parse repository")
+
 }
 
 func main() {
