@@ -4,47 +4,65 @@ chainlink
 > Get a handle on PRs chains on GitHub <
 
 
-Usage: chainlink <action> [flags] [branch]
-
-Actions:
-log  - log all chains in repo (provide branch to limit)
-open - open all links in a chain (provide any branch in chain)
+Usage: chainlink <command>
 
 Flags:
-  -repo string
-        repo to work on (eg: meain/chainlink)
+  -h, --help           Show context-sensitive help.
+      --repo=STRING    Repository to operate on
+      --no-cache       Ignore cache (cached for 1m)
+
+Commands:
+  log
+    Log PR chains
+
+  open <filter>
+    Open specific PR chain
+
+  rebase <filter>
+    Rebase specific PR chain
+
+Run "chainlink <command> --help" for more information on a command.
 
 
 Example
 =======
 
 $ chainlink -repo alcionai/corso log
-
-[#4051] Basic code for backup cleanup (3217-incomplete-backup-cleanup) <ashmrtn>
-        [#4065] Add and populate mod time for BaseModel (3217-model-mod-time) <ashmrtn>
-                [#4066] Exclude recently created models from garbage collection (3217-delay-model-gc) <ashmrtn>
-
-[#4030] Create backup collections for Group's default SharePoint site (group-files) <meain>
-        [#4043] Group CLI (group-cli) <meain>
-
-[#4050] add handlers for channels (channelHandlers) <neha-Gupta1>
-        [#4068] channels and messages API (HandlerImplemenation) <neha-Gupta1>
-
+#4051 Basic code for backup cleanup (ashmrtn) [3217-incomplete-backup-cleanup]
+ #4065 Add and populate mod time for BaseModel (ashmrtn) [3217-model-mod-time]
+  #4066 Exclude recently created models from garbage collection (ashmrtn) [3217-delay-model-gc]
+#4030 Create backup collections for Group's default SharePoint site (meain) [group-files]
+ #4043 Group CLI (meain) [group-cli]
+#4050 add handlers for channels (neha-Gupta1) [channelHandlers]
+ #4068 channels and messages API (neha-Gupta1) [HandlerImplemenation]
 
 $ chainlink -repo alcionai/corso open group-cli
-
 Opening https://github.com/alcionai/corso/pull/4030
 Opening https://github.com/alcionai/corso/pull/4043
 
 $ chainlink rebase 3217-model-mod-time | tee /dev/stderr | bash
+#!/bin/sh
 
 set -ex
+
 git checkout 3217-incomplete-backup-cleanup
-git rebase main
+git rebase --update-refs main
 git push --force-with-lease
+
 git checkout 3217-model-mod-time
-git rebase 3217-incomplete-backup-cleanup
+git rebase --update-refs 3217-incomplete-backup-cleanup
 git push --force-with-lease
+
 git checkout 3217-delay-model-gc
-git rebase 3217-model-mod-time
+git rebase --update-refs 3217-model-mod-time
 git push --force-with-lease
+
+Getting the token for CHAINLINK_TOKEN
+=====================================
+
+- Go to https://github.com/settings/tokens?type=beta
+- Click on "Generate new token"
+- Add a name, exiration and description as you prefer
+- Select "Public Repositories (read only)" (this is the default)
+- Click on "Generate token"
+- Set the token you get as env variable (export CHAINLINK_TOKEN="github_pat_...")
