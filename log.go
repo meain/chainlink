@@ -40,7 +40,7 @@ func logChains(d data, all bool) {
 func printChildren(d data, mappings map[int]mapping, base, level int, all bool) {
 	for _, p := range mappings[base].following {
 		indent := strings.Repeat(" ", level)
-		fmt.Println(indent, formatPR(d.prs[p]))
+		fmt.Println(indent + formatPR(d.prs[p]))
 		printChildren(d, mappings, p, level+1, all)
 	}
 }

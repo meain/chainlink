@@ -96,6 +96,7 @@ func openBrowser(url string) error {
 	}
 
 	if cmd != nil {
+		fmt.Println("Opening", url)
 		return cmd.Run()
 	}
 
