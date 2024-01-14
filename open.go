@@ -49,7 +49,6 @@ func filterByNumber(d data, num int) []int {
 	return prns
 }
 
-// TODO: needs quite a bit of testing
 func filterChain(d data, filter string) []int {
 	prns := []int{}
 
