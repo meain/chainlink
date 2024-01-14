@@ -8,20 +8,24 @@ import (
 	"strconv"
 )
 
-func filterByBranch(d data, branch string) []int {
-	num := d.branch[branch]
-	prns := []int{num}
+func filterByNumber(d data, num int) []int {
+	if num == 0 {
+		return []int{}
+	}
+
+	prns := []int{}
 
 	// items before
+	iter := num
 	for {
-		base := d.mappings[num].base
+		base := d.mappings[iter].base
 		prns = append([]int{base}, prns...)
 
 		if base == 0 {
 			break
 		}
 
-		num = base
+		iter = base
 	}
 
 	// items after
@@ -33,23 +37,14 @@ func filterByBranch(d data, branch string) []int {
 
 		last := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
+		prns = append(prns, last)
 		following := d.mappings[last].following
 
 		if len(following) > 0 {
-			prns = append(prns, following[0])
-		}
-
-		if len(following) > 1 {
 			slices.Reverse(following)
-			stack = append(stack[:len(stack)-1], following[:len(following)-1]...)
+			stack = append(stack, following...)
 		}
 	}
-
-	return prns
-}
-
-func filterByNumber(d data, num int) []int {
-	prns := []int{}
 
 	return prns
 }
@@ -60,10 +55,13 @@ func filterChain(d data, filter string) []int {
 
 	num, err := strconv.Atoi(filter)
 	if err != nil {
-		prns = filterByBranch(d, filter)
-	} else {
-		prns = filterByNumber(d, num)
+		num = d.branch[filter]
+		if num == 0 {
+			fmt.Printf("No branch found for filter %s\n", filter)
+		}
 	}
+
+	prns = filterByNumber(d, num)
 
 	if len(prns) == 0 {
 		return prns
