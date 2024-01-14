@@ -19,7 +19,8 @@ var CLI struct {
 		Push bool `help:"Push changes to upstream"`
 	} `cmd:"" help:"Log PR chains"`
 
-	Repo string `help:"Repository to operate on"`
+	Repo    string `help:"Repository to operate on"`
+	NoCache bool   `help:"Ignore cache (cached for 1m)"` // TODO: not sure if cache will be a bad idea
 }
 
 // TODO: Automatically fetch repo from .git/config
@@ -40,7 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, err := getData(context.TODO(), org, repo)
+	data, err := getData(context.TODO(), org, repo, !CLI.NoCache)
 	if err != nil {
 		log.Fatal(err)
 	}

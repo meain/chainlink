@@ -1,18 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
+
+const githubURL = "https://api.github.com/graphql"
 
 //go:embed request.graphql
 var request string
-
-//go:embed response
-var response string
 
 type pr struct {
 	number     int
@@ -37,16 +42,92 @@ type data struct {
 	mappings      map[int]mapping
 }
 
-func getData(ctx context.Context, org, repo string) (data, error) {
+const CACHE_DIR_BASE = "/tmp/chainlink" // TODO: make cross platform
+const CACHE_INTERVAL = 1 * time.Minute
+
+func getToken() (string, error) {
+	// TODO: explain how to generate token (you just need a basic readonly fine grained pat)
+	token := os.Getenv("CHAINLINK_TOKEN")
+	if len(token) > 0 {
+		return token, nil
+	}
+
+	return "", fmt.Errorf("missing token")
+}
+
+func fetchData(org, repo string, cache bool) ([]byte, error) {
+	cacheFile := fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
+
+	if cache {
+		if st, err := os.Stat(cacheFile); !os.IsNotExist(err) {
+			if time.Now().Sub(st.ModTime()) < CACHE_INTERVAL {
+				bts, err := os.ReadFile(cacheFile)
+				if err == nil {
+					return bts, nil
+				}
+			}
+		}
+	}
+
+	gql := fmt.Sprintf(request, org, repo)
+	body := fmt.Sprintf(`{"query": "%s"}`, strings.ReplaceAll(strings.ReplaceAll(gql, `"`, `\"`), "\n", "\\n"))
+	bodyReader := bytes.NewReader([]byte(body))
+
+	req, err := http.NewRequest(http.MethodPost, githubURL, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := getToken()
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	// Read the response body
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+
+	bts := buf.Bytes()
+
+	err = os.MkdirAll(filepath.Dir(cacheFile), os.ModePerm)
+	if err != nil {
+		log.Print("Unable to create cache data dir", err)
+		return bts, nil
+	}
+
+	err = os.WriteFile(cacheFile, bts, 0644)
+	if err != nil {
+		log.Print("Unable to cache data", err)
+		return bts, nil
+	}
+
+	return bts, nil
+}
+
+func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 	d := data{
 		prs:      map[int]pr{},
 		branch:   map[string]int{},
 		mappings: map[int]mapping{},
 	}
 
-	// TODO: Switch to doing a graphql query
+	response, err := fetchData(org, repo, cache)
+	if err != nil {
+		return d, err
+	}
+
 	resp := Response{}
-	err := json.Unmarshal([]byte(response), &resp)
+	err = json.Unmarshal(response, &resp)
 	if err != nil {
 		return d, fmt.Errorf("unable to marshal response: %e", err)
 	}
