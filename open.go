@@ -54,7 +54,8 @@ func filterByNumber(d data, num int) []int {
 	return prns
 }
 
-func openChain(d data, filter string, print bool) {
+// TODO: needs quite a bit of testing
+func filterChain(d data, filter string) []int {
 	prns := []int{}
 
 	num, err := strconv.Atoi(filter)
@@ -65,7 +66,13 @@ func openChain(d data, filter string, print bool) {
 	}
 
 	// first item will be base(0)
-	for _, p := range prns[1:] {
+	return prns[1:]
+}
+
+func openChain(d data, filter string, print bool) {
+	prns := filterChain(d, filter)
+
+	for _, p := range prns {
 		if print {
 			fmt.Println(fmt.Sprintf("%s/pull/%d", d.url, p))
 		} else {

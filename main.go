@@ -21,7 +21,11 @@ var CLI struct {
 	} `cmd:"" help:"Open specific PR chain"`
 
 	Rebase struct {
-		Push bool `help:"Push changes to upstream"`
+		Filter string `arg:"" help:"Number or branch to select chain"`
+		Push   bool   `help:"Push changes to upstream"`
+		Args   string `help:"Extra args for pushing" default:"--force-with-lease"`
+		Run    bool   `help:"Run the commands instead of printing"`
+		Shell  string `help:"Shell for running commands" default:"$SHELL"`
 	} `cmd:"" help:"Rebase specific PR chain"`
 
 	Repo    string `help:"Repository to operate on"`
@@ -56,6 +60,17 @@ func main() {
 		logChains(data, CLI.Log.All)
 	case "open <filter>":
 		openChain(data, CLI.Open.Filter, CLI.Open.Print)
+	case "rebase <filter>":
+		err := rebaseChain(
+			data,
+			CLI.Rebase.Filter,
+			CLI.Rebase.Push,
+			CLI.Rebase.Run,
+			CLI.Rebase.Args,
+			CLI.Rebase.Shell)
+		if err != nil {
+			log.Fatal(err)
+		}
 	default:
 		panic(ctx.Command())
 	}

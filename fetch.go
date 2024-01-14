@@ -129,7 +129,7 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 	resp := Response{}
 	err = json.Unmarshal(response, &resp)
 	if err != nil {
-		return d, fmt.Errorf("unable to marshal response: %e", err)
+		return d, fmt.Errorf("unable to marshal response: %v", err)
 	}
 
 	d.defaultBranch = resp.Data.Repository.DefaultBranchRef.Name
