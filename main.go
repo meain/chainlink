@@ -11,6 +11,8 @@ import (
 
 var CLI struct {
 	Log struct {
+		// TODO: do we need filter?
+		// TODO: more filter options (eg: by author)
 		Output string `help:"How to format the output"`
 		All    bool   `help:"Print all PRs and not just chains"`
 	} `cmd:"" help:"Log PR chains"`
