@@ -16,8 +16,13 @@ var CLI struct {
 	} `cmd:"" help:"Log PR chains"`
 
 	Open struct {
+		Filter string `arg:"" help:"Number or branch to select chain"`
+		Print  bool   `help:"Print URLs instead of opening"`
+	} `cmd:"" help:"Open specific PR chain"`
+
+	Rebase struct {
 		Push bool `help:"Push changes to upstream"`
-	} `cmd:"" help:"Log PR chains"`
+	} `cmd:"" help:"Rebase specific PR chain"`
 
 	Repo    string `help:"Repository to operate on"`
 	NoCache bool   `help:"Ignore cache (cached for 1m)"` // TODO: not sure if cache will be a bad idea
@@ -49,6 +54,8 @@ func main() {
 	switch ctx.Command() {
 	case "log":
 		logChains(data, CLI.Log.All)
+	case "open <filter>":
+		openChain(data, CLI.Open.Filter, CLI.Open.Print)
 	default:
 		panic(ctx.Command())
 	}

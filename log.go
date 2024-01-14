@@ -29,21 +29,20 @@ func filterChains(m map[int]mapping) map[int]mapping {
 	return nm
 }
 
-func logChains(d data, all bool) error {
+func logChains(d data, all bool) {
 	mappings := d.mappings
 	if !all {
 		mappings = filterChains(d.mappings)
 	}
-	return printChildren(d, mappings, 0, 0, all)
+	printChildren(d, mappings, 0, 0, all)
 }
 
-func printChildren(d data, mappings map[int]mapping, base, level int, all bool) error {
+func printChildren(d data, mappings map[int]mapping, base, level int, all bool) {
 	for _, p := range mappings[base].following {
 		indent := strings.Repeat(" ", level)
 		fmt.Println(indent, formatPR(d.prs[p]))
 		printChildren(d, mappings, p, level+1, all)
 	}
-	return nil
 }
 
 func formatPR(p pr) string {
