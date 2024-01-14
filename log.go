@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 // filterChains filters our PR which aren't chains
@@ -45,5 +47,13 @@ func printChildren(d data, mappings map[int]mapping, base, level int, all bool) 
 }
 
 func formatPR(p pr) string {
-	return fmt.Sprintf("#%d", p.number)
+	green := color.New(color.FgGreen).SprintFunc()
+	line := fmt.Sprintf("#%d %s (%s) [%s]", p.number, p.title, p.author, p.head)
+
+	if len(p.approvedBy) > 0 {
+		return green(line)
+	} else {
+		return line
+	}
+
 }
