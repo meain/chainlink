@@ -24,14 +24,6 @@
               }
             }
           }
-          labels(first: 5) {
-            edges {
-              node {
-                name
-                color
-              }
-            }
-          }
         }
       }
     }
