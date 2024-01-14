@@ -15,6 +15,10 @@ func rebaseChain(
 	shell string,
 ) error {
 	prns := filterChain(d, filter)
+	if len(prns) == 0 {
+		fmt.Println("No PR chain found with filter")
+		return nil
+	}
 
 	lines := []string{"#!/bin/sh", "", "set -e"}
 

@@ -65,12 +65,20 @@ func filterChain(d data, filter string) []int {
 		prns = filterByNumber(d, num)
 	}
 
+	if len(prns) == 0 {
+		return prns
+	}
+
 	// first item will be base(0)
 	return prns[1:]
 }
 
 func openChain(d data, filter string, print bool) {
 	prns := filterChain(d, filter)
+	if len(prns) == 0 {
+		fmt.Println("No PR chain found with filter")
+		return
+	}
 
 	for _, p := range prns {
 		if print {

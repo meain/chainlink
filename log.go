@@ -34,6 +34,12 @@ func logChains(d data, all bool) {
 	if !all {
 		mappings = filterChains(d.mappings)
 	}
+
+	if len(mappings) == 0 {
+		fmt.Println("No PR chains")
+		return
+	}
+
 	printChildren(d, mappings, 0, 0, all)
 }
 

@@ -90,6 +90,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if len(data.prs) == 0 {
+		fmt.Println("No PRs and therefore no chains")
+		return
+	}
+
 	switch ctx.Command() {
 	case "log":
 		logChains(data, CLI.Log.All)
