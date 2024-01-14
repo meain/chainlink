@@ -60,9 +60,11 @@ git push --force-with-lease
 Getting the token for CHAINLINK_TOKEN
 =====================================
 
-- Go to https://github.com/settings/tokens?type=beta
-- Click on "Generate new token"
-- Add a name, exiration and description as you prefer
-- Select "Public Repositories (read only)" (this is the default)
+- Go to https://github.com/settings/tokens
+- Click on "Generate new token" > "Generate new token (classic)"
+- Set note, and expiration
+- Select "repo" in "Select scopes" section
 - Click on "Generate token"
-- Set the token you get as env variable (export CHAINLINK_TOKEN="github_pat_...")
+- Set the token you get as env variable (export CHAINLINK_TOKEN="gh_...")
+
+> If you only need to use on public repos, you can generate a fine grained token with no additional permissions
