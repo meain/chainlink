@@ -46,7 +46,6 @@ const CACHE_DIR_BASE = "/tmp/chainlink" // TODO: make cross platform
 const CACHE_INTERVAL = 1 * time.Minute
 
 func getToken() (string, error) {
-	// TODO: explain how to generate token (you just need a basic readonly fine grained pat)
 	token := os.Getenv("CHAINLINK_TOKEN")
 	if len(token) > 0 {
 		return token, nil
@@ -56,8 +55,6 @@ func getToken() (string, error) {
 }
 
 func fetchData(org, repo string, cache bool) ([]byte, error) {
-	fmt.Printf("Fetching data for %s/%s...\r", org, repo)
-
 	cacheFile := fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
 
 	if cache {
@@ -71,30 +68,12 @@ func fetchData(org, repo string, cache bool) ([]byte, error) {
 		}
 	}
 
-	gql := fmt.Sprintf(request, org, repo)
-	body := fmt.Sprintf(`{"query": "%s"}`, strings.ReplaceAll(strings.ReplaceAll(gql, `"`, `\"`), "\n", "\\n"))
-	bodyReader := bytes.NewReader([]byte(body))
-
-	req, err := http.NewRequest(http.MethodPost, githubURL, bodyReader)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := getToken()
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "bearer "+token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := makeRequest(org, repo)
 	if err != nil {
 		return nil, err
 	}
 
 	defer resp.Body.Close()
-	fmt.Print("\x1b[2K") // Erase the progress line
 
 	// Read the response body
 	buf := new(bytes.Buffer)
@@ -115,6 +94,30 @@ func fetchData(org, repo string, cache bool) ([]byte, error) {
 	}
 
 	return bts, nil
+}
+
+func makeRequest(org string, repo string) (*http.Response, error) {
+	fmt.Printf("Fetching data for %s/%s...\r", org, repo)
+	defer func() { fmt.Print("\x1b[2K") }()
+
+	gql := fmt.Sprintf(request, org, repo)
+	body := fmt.Sprintf(`{"query": "%s"}`, strings.ReplaceAll(strings.ReplaceAll(gql, `"`, `\"`), "\n", "\\n"))
+	bodyReader := bytes.NewReader([]byte(body))
+
+	req, err := http.NewRequest(http.MethodPost, githubURL, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := getToken()
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "bearer "+token)
+
+	client := &http.Client{}
+	return client.Do(req)
 }
 
 func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
