@@ -42,6 +42,10 @@ You'll have to setup `CHAINLINK_TOKEN` env variable to a GitHub personal access 
 
 # Examples
 
+## Log PR chains
+
+_Approved PRs will be in green._
+
 ```
 $ chainlink log --repo alcionai/corso
 
@@ -54,12 +58,16 @@ $ chainlink log --repo alcionai/corso
  #4068 channels and messages API (neha-Gupta1) [HandlerImplemenation]
 ```
 
+## Open a PR chain in the correct order
+
 ```
 $ chainlink open --repo alcionai/corso group-cli
 
 Opening https://github.com/alcionai/corso/pull/4030
 Opening https://github.com/alcionai/corso/pull/4043
 ```
+
+## Rebase a PR chain with main
 
 ```
 $ chainlink rebase 3217-model-mod-time --push
