@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -78,7 +79,11 @@ func getOrgRepo(arg string) (string, string, error) {
 }
 
 func main() {
-	ctx := kong.Parse(&CLI)
+	cmd := "log"
+	if len(os.Args) > 1 {
+		ctx := kong.Parse(&CLI)
+		cmd = ctx.Command()
+	}
 
 	org, repo, err := getOrgRepo(CLI.Repo)
 	if err != nil {
@@ -95,7 +100,7 @@ func main() {
 		return
 	}
 
-	switch ctx.Command() {
+	switch cmd {
 	case "log":
 		logChains(data, CLI.Log.All)
 	case "open <filter>":
@@ -112,6 +117,6 @@ func main() {
 			log.Fatal(err)
 		}
 	default:
-		panic(ctx.Command())
+		panic(cmd)
 	}
 }
