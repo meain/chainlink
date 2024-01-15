@@ -56,6 +56,8 @@ func getToken() (string, error) {
 }
 
 func fetchData(org, repo string, cache bool) ([]byte, error) {
+	fmt.Printf("Fetching data for %s/%s...\r", org, repo)
+
 	cacheFile := fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
 
 	if cache {
@@ -92,6 +94,7 @@ func fetchData(org, repo string, cache bool) ([]byte, error) {
 	}
 
 	defer resp.Body.Close()
+	fmt.Print("\x1b[2K") // Erase the progress line
 
 	// Read the response body
 	buf := new(bytes.Buffer)
