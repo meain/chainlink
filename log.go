@@ -24,7 +24,9 @@ func filterChains(m map[int]mapping) map[int]mapping {
 		mp = append(mp, p)
 	}
 
-	nm[0] = mapping{following: mp}
+	if len(mp) > 0 {
+		nm[0] = mapping{following: mp}
+	}
 
 	return nm
 }
