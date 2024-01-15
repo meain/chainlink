@@ -1,9 +1,8 @@
-chainlink
-=========
+# chainlink
 
-> Get a handle on PRs chains on GitHub <
+> Get a handle on PRs chains on GitHub
 
-
+```
 Usage: chainlink <command>
 
 Flags:
@@ -22,12 +21,30 @@ Commands:
     Rebase specific PR chain
 
 Run "chainlink <command> --help" for more information on a command.
+```
 
+# Configuration
 
-Example
-=======
+You'll have to setup `CHAINLINK_TOKEN` env variable to a GitHub personal access token.
 
-$ chainlink -repo alcionai/corso log
+### Getting the token for `CHAINLINK_TOKEN`
+
+- Go to [tokens](https://github.com/settings/tokens)
+- Click on "Generate new token" > "Generate new token (classic)"
+- Set note, and expiration your preferred values
+- Select "repo" in "Select scopes" section
+- Click on "Generate token"
+- Set the token you get as env variable (export CHAINLINK_TOKEN="gh_...")
+
+> If you only need to use on public repos, you can generate a [fine
+> grained](https://github.com/settings/tokens?type=beta) token with
+> just read only access to public repositories.
+
+# Examples
+
+```
+$ chainlink log --repo alcionai/corso
+
 #4051 Basic code for backup cleanup (ashmrtn) [3217-incomplete-backup-cleanup]
  #4065 Add and populate mod time for BaseModel (ashmrtn) [3217-model-mod-time]
   #4066 Exclude recently created models from garbage collection (ashmrtn) [3217-delay-model-gc]
@@ -35,12 +52,18 @@ $ chainlink -repo alcionai/corso log
  #4043 Group CLI (meain) [group-cli]
 #4050 add handlers for channels (neha-Gupta1) [channelHandlers]
  #4068 channels and messages API (neha-Gupta1) [HandlerImplemenation]
+```
 
-$ chainlink -repo alcionai/corso open group-cli
+```
+$ chainlink open --repo alcionai/corso group-cli
+
 Opening https://github.com/alcionai/corso/pull/4030
 Opening https://github.com/alcionai/corso/pull/4043
+```
 
-$ chainlink rebase 3217-model-mod-time | tee /dev/stderr | bash
+```
+$ chainlink rebase 3217-model-mod-time --push
+
 #!/bin/sh
 
 set -ex
@@ -56,15 +79,4 @@ git push --force-with-lease
 git checkout 3217-delay-model-gc
 git rebase --update-refs 3217-model-mod-time
 git push --force-with-lease
-
-Getting the token for CHAINLINK_TOKEN
-=====================================
-
-- Go to https://github.com/settings/tokens
-- Click on "Generate new token" > "Generate new token (classic)"
-- Set note, and expiration
-- Select "repo" in "Select scopes" section
-- Click on "Generate token"
-- Set the token you get as env variable (export CHAINLINK_TOKEN="gh_...")
-
-> If you only need to use on public repos, you can generate a fine grained token with no additional permissions
+```
