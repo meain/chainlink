@@ -13,8 +13,8 @@ import (
 
 var CLI struct {
 	Log struct {
-		// TODO: do we need filter?
-		// TODO: more filter options (eg: by author)
+		// TODO: More filter options (eg: by author, needs review, by reviewer, has label)
+		// TODO: Allow passing in custom format for printing
 		Output string `help:"How to format the output"`
 		All    bool   `help:"Print all PRs and not just chains"`
 	} `cmd:"" help:"Log PR chains"`
