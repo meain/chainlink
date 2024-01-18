@@ -9,24 +9,19 @@ import (
 
 // filterChains filters our PR which aren't chains
 func filterChains(m map[int]mapping) map[int]mapping {
-	nm := map[int]mapping{}
+	nm := make(map[int]mapping, len(m))
+	for k, v := range m {
+		nm[k] = v
+	}
 
-	for _, p := range m[0].following {
-		if len(m[p].following) == 0 {
-			continue
+	items := []int{}
+	for _, v := range m[0].following {
+		if len(m[v].following) > 0 {
+			items = append(items, v)
 		}
-
-		nm[p] = m[p]
 	}
 
-	mp := []int{}
-	for p := range nm {
-		mp = append(mp, p)
-	}
-
-	if len(mp) > 0 {
-		nm[0] = mapping{following: mp}
-	}
+	nm[0] = mapping{following: items}
 
 	return nm
 }
