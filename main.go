@@ -32,7 +32,7 @@ var CLI struct {
 		Shell  string `help:"Shell for running commands" default:"$SHELL"`
 	} `cmd:"" help:"Rebase specific PR chain"`
 
-	Repo    string `help:"Repository to operate on"`
+	Repo    string `help:"Repository to operate on (default: current)"`
 	NoCache bool   `help:"Ignore cache (cached for 1m)"` // TODO: not sure if cache will be a bad idea
 }
 
