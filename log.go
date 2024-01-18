@@ -43,14 +43,21 @@ func logChains(d data, all bool) {
 func printChildren(d data, mappings map[int]mapping, base, level int, all bool) {
 	for _, p := range mappings[base].following {
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
-		fmt.Println(indent + formatPR(d.prs[p]))
+		fmt.Println(indent + formatPR(d.prs[p], d.url))
 		printChildren(d, mappings, p, level+1, all)
 	}
 }
 
-func formatPR(p pr) string {
+func formatPR(p pr, url string) string {
 	green := color.New(color.FgGreen).SprintFunc()
-	line := fmt.Sprintf("#%d %s (%s) [%s]", p.number, p.title, p.author, p.head)
+	line := fmt.Sprintf(
+		"\x1b]8;;%s/pull/%d\x07#%d\x1b]8;;\x07 %s (%s) [%s]",
+		url,
+		p.number,
+		p.number,
+		p.title,
+		p.author,
+		p.head)
 
 	if len(p.approvedBy) > 0 {
 		return green(line)
