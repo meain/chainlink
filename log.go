@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"hash/fnv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -48,23 +47,25 @@ func printChildren(d data, mappings map[int]mapping, base, level int, all bool) 
 		printChildren(d, mappings, p, level+1, all)
 	}
 }
-func hashString(s string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return h.Sum32()
-}
 
-func generateColor(hash uint32) *color.Color {
-	// Extract individual components of the hash value
-	r := int((hash >> 16) & 0xFF)
-	g := int((hash >> 8) & 0xFF)
-	b := int(hash & 0xFF)
+// generateColor generates a random color for any string
+// using hsl and converting to rgb as it is easier to make it look
+// nicer for random colors
+func generateColor(str string) *color.Color {
+	authorSum := 0
+	for _, c := range str {
+		authorSum += int(c)
+	}
 
-	return color.New(38, 2, color.Attribute(r), color.Attribute(g), color.Attribute(b))
+	authorHash := authorSum % 355
+	hsl := HSL{float64(authorHash), 0.5, .5}
+	rgb := HSLToRGB(hsl)
+
+	return color.New(38, 2, color.Attribute(rgb.R*255), color.Attribute(rgb.G*255), color.Attribute(rgb.B*255))
 }
 
 func formatPR(p pr, url string) string {
-	authorColor := generateColor(hashString(p.author)).SprintFunc()
+	authorColor := generateColor(p.author).SprintFunc()
 	author := authorColor(p.author)
 
 	green := color.New(color.FgGreen).SprintFunc()
