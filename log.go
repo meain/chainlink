@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -47,22 +48,41 @@ func printChildren(d data, mappings map[int]mapping, base, level int, all bool) 
 		printChildren(d, mappings, p, level+1, all)
 	}
 }
+func hashString(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
+}
+
+func generateColor(hash uint32) *color.Color {
+	// Extract individual components of the hash value
+	r := int((hash >> 16) & 0xFF)
+	g := int((hash >> 8) & 0xFF)
+	b := int(hash & 0xFF)
+
+	return color.New(38, 2, color.Attribute(r), color.Attribute(g), color.Attribute(b))
+}
 
 func formatPR(p pr, url string) string {
+	authorColor := generateColor(hashString(p.author)).SprintFunc()
+	author := authorColor(p.author)
+
 	green := color.New(color.FgGreen).SprintFunc()
-	line := fmt.Sprintf(
-		"\x1b]8;;%s/pull/%d\x07#%d\x1b]8;;\x07 %s (%s) [%s]",
-		url,
-		p.number,
-		p.number,
-		p.title,
-		p.author,
-		p.head)
+	number := fmt.Sprintf("#%d", p.number)
 
 	if len(p.approvedBy) > 0 {
-		return green(line)
-	} else {
-		return line
+		number = green(number)
 	}
+
+	line := fmt.Sprintf(
+		"\x1b]8;;%s/pull/%d\x07%s\x1b]8;;\x07 %s (%s) [%s]",
+		url,
+		p.number,
+		number,
+		p.title,
+		author,
+		p.head)
+
+	return line
 
 }
