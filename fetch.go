@@ -188,7 +188,8 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 		fl, ok := d.branch[base]
 		if !ok {
 			// This can happen because we only fetch so many PRs
-			log.Print(fmt.Printf("base missing for %d, using %s", id, d.defaultBranch))
+			// Limited to 100 due to GH limitation for a single page
+			fmt.Fprintf(os.Stderr, "base missing for %d, using %s\n", id, d.defaultBranch)
 		}
 
 		following = []int{id}
