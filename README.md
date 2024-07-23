@@ -88,3 +88,7 @@ git checkout 3217-delay-model-gc
 git rebase --update-refs 3217-model-mod-time
 git push --force-with-lease
 ```
+
+# Alternatives
+
+- [git-spice](https://abhinav.github.io/git-spice/)
