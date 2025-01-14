@@ -13,6 +13,8 @@ Flags:
 Commands:
   log
     Log PR chains
+    --output=STRING  How to format the output (default|small|markdown)
+    --all          Print all PRs and not just chains
 
   open <filter>
     Open specific PR chain

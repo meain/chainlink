@@ -37,14 +37,23 @@ func logChains(d data, all bool) {
 		return
 	}
 
-	printChildren(d, mappings, 0, 0, all)
+	printChildren(d, mappings, 0, 0, all, CLI.Log.Output)
 }
 
-func printChildren(d data, mappings map[int]mapping, base, level int, all bool) {
+func printChildren(d data, mappings map[int]mapping, base, level int, all bool, output string) {
 	for _, p := range mappings[base].following {
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
-		fmt.Println(indent + formatPR(d.prs[p], d.url))
-		printChildren(d, mappings, p, level+1, all)
+		var line string
+		switch output {
+		case "small":
+			line = formatPRSmall(d.prs[p], d.url)
+		case "markdown":
+			line = formatPRMarkdown(d.prs[p], d.url)
+		default:
+			line = formatPR(d.prs[p], d.url)
+		}
+		fmt.Println(indent + line)
+		printChildren(d, mappings, p, level+1, all, output)
 	}
 }
 
@@ -62,6 +71,34 @@ func generateColor(str string) *color.Color {
 	rgb := HSLToRGB(hsl)
 
 	return color.New(38, 2, color.Attribute(rgb.R*255), color.Attribute(rgb.G*255), color.Attribute(rgb.B*255))
+}
+
+func formatPRSmall(p pr, url string) string {
+	green := color.New(color.FgGreen).SprintFunc()
+	number := fmt.Sprintf("#%d", p.number)
+
+	if len(p.approvedBy) > 0 {
+		number = green(number)
+	}
+
+	line := fmt.Sprintf(
+		"%s %s",
+		number,
+		p.title,
+	)
+
+	return line
+}
+
+func formatPRMarkdown(p pr, url string) string {
+	line := fmt.Sprintf(
+		"- [%d](%s/pull/%d)",
+		p.number,
+		url,
+		p.number,
+	)
+
+	return line
 }
 
 func formatPR(p pr, url string) string {

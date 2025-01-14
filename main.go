@@ -14,8 +14,7 @@ import (
 var CLI struct {
 	Log struct {
 		// TODO: More filter options (eg: by author, needs review, by reviewer, has label)
-		// TODO: Allow passing in custom format for printing
-		Output string `help:"How to format the output"`
+		Output string `help:"How to format the output" enum:"default,small,markdown" default:"default"`
 		All    bool   `help:"Print all PRs and not just chains"`
 	} `cmd:"" help:"Log PR chains"`
 
