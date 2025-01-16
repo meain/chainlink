@@ -92,7 +92,7 @@ func formatPRSmall(p pr, url string) string {
 
 func formatPRMarkdown(p pr, url string) string {
 	line := fmt.Sprintf(
-		"- [%d](%s/pull/%d) %s",
+		"- [#%d](%s/pull/%d) %s",
 		p.number,
 		url,
 		p.number,
