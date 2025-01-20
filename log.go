@@ -37,11 +37,22 @@ func logChains(d data, all bool) {
 		return
 	}
 
-	printChildren(d, mappings, 0, 0, all, CLI.Log.Output)
+	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, CLI.Log.Author)
 }
 
-func printChildren(d data, mappings map[int]mapping, base, level int, all bool, output string) {
+func printChildren(
+	d data,
+	mappings map[int]mapping,
+	base, level int,
+	all bool,
+	output string,
+	author string,
+) {
 	for _, p := range mappings[base].following {
+		if len(author) != 0 && d.prs[p].author != author {
+			continue
+		}
+
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
 		var line string
 		switch output {
@@ -53,7 +64,7 @@ func printChildren(d data, mappings map[int]mapping, base, level int, all bool, 
 			line = formatPR(d.prs[p], d.url)
 		}
 		fmt.Println(indent + line)
-		printChildren(d, mappings, p, level+1, all, output)
+		printChildren(d, mappings, p, level+1, all, output, author)
 	}
 }
 
@@ -81,11 +92,7 @@ func formatPRSmall(p pr, url string) string {
 		number = green(number)
 	}
 
-	line := fmt.Sprintf(
-		"%s %s",
-		number,
-		p.title,
-	)
+	line := fmt.Sprintf("%s %s", number, p.title)
 
 	return line
 }
@@ -96,8 +103,7 @@ func formatPRMarkdown(p pr, url string) string {
 		p.number,
 		url,
 		p.number,
-		p.title,
-	)
+		p.title)
 
 	return line
 }

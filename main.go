@@ -16,11 +16,13 @@ var CLI struct {
 		// TODO: More filter options (eg: by author, needs review, by reviewer, has label)
 		Output string `help:"How to format the output" enum:"default,small,markdown" default:"default"`
 		All    bool   `help:"Print all PRs and not just chains"`
+		Author string `help:"Filter by author"`
 	} `cmd:"" help:"Log PR chains"`
 
 	Open struct {
 		Filter string `arg:"" help:"Number or branch to select chain"`
 		Print  bool   `help:"Print URLs instead of opening"`
+		Author string `help:"Filter by author"`
 	} `cmd:"" help:"Open specific PR chain"`
 
 	Rebase struct {
@@ -103,7 +105,7 @@ func main() {
 	case "log":
 		logChains(data, CLI.Log.All)
 	case "open <filter>":
-		openChain(data, CLI.Open.Filter, CLI.Open.Print)
+		openChain(data, CLI.Open.Filter, CLI.Open.Print, CLI.Open.Author)
 	case "rebase <filter>":
 		err := rebaseChain(
 			data,
