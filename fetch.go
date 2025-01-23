@@ -97,8 +97,8 @@ func fetchData(org, repo string, cache bool) ([]byte, error) {
 }
 
 func makeRequest(org string, repo string) (*http.Response, error) {
-	fmt.Printf("Fetching data for %s/%s...\r", org, repo)
-	defer func() { fmt.Print("\x1b[2K") }()
+	fmt.Fprintf(os.Stderr, "Fetching data for %s/%s...\r", org, repo)
+	defer func() { fmt.Fprint(os.Stderr, "\x1b[2K") }()
 
 	gql := fmt.Sprintf(request, org, repo)
 	body := fmt.Sprintf(`{"query": "%s"}`, strings.ReplaceAll(strings.ReplaceAll(gql, `"`, `\"`), "\n", "\\n"))
