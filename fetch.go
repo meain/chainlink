@@ -26,7 +26,12 @@ type pr struct {
 	title      string
 	author     string
 	approvedBy string
-	// TODO: graphql query contains labels, keep them?
+	labels     []string
+	isDraft    bool
+	createdAt  time.Time
+	reviewers  []string
+	additions  int
+	deletions  int
 }
 
 type mapping struct {
@@ -157,6 +162,20 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 			aby = n.Reviews.Edges[0].Node.Author.Login
 		}
 
+		labels := make([]string, 0)
+		for _, label := range n.Labels.Nodes {
+			labels = append(labels, label.Name)
+		}
+
+		reviewers := make([]string, 0)
+		for _, req := range n.ReviewRequests.Nodes {
+			if req.RequestedReviewer.Login != "" {
+				reviewers = append(reviewers, req.RequestedReviewer.Login)
+			}
+		}
+
+		createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
+
 		mpr := pr{
 			number:     n.Number,
 			head:       n.HeadRefName,
@@ -164,6 +183,12 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 			author:     n.Author.Login,
 			title:      n.Title,
 			approvedBy: aby,
+			labels:     labels,
+			isDraft:    n.IsDraft,
+			createdAt:  createdAt,
+			reviewers:  reviewers,
+			additions:  n.Additions,
+			deletions:  n.Deletions,
 		}
 
 		d.prs[n.Number] = mpr

@@ -27,13 +27,21 @@ type Response struct {
 							} `json:"edges"`
 						} `json:"reviews"`
 						Labels struct {
-							Edges []struct {
-								Node struct {
-									Name  string `json:"name"`
-									Color string `json:"color"`
-								} `json:"node"`
-							} `json:"edges"`
+							Nodes []struct {
+								Name string `json:"name"`
+							} `json:"nodes"`
 						} `json:"labels"`
+						IsDraft    bool      `json:"isDraft"`
+						CreatedAt  string    `json:"createdAt"`
+						ReviewRequests struct {
+							Nodes []struct {
+								RequestedReviewer struct {
+									Login string `json:"login"`
+								} `json:"requestedReviewer"`
+							} `json:"nodes"`
+						} `json:"reviewRequests"`
+						Additions int `json:"additions"`
+						Deletions int `json:"deletions"`
 					} `json:"node"`
 				} `json:"edges"`
 			} `json:"pullRequests"`

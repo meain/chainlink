@@ -24,6 +24,24 @@
               }
             }
           }
+          labels(first: 10) {
+            nodes {
+              name
+            }
+          }
+          isDraft
+          createdAt
+          reviewRequests(first: 10) {
+            nodes {
+              requestedReviewer {
+                ... on User {
+                  login
+                }
+              }
+            }
+          }
+          additions
+          deletions
         }
       }
     }

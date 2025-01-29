@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -26,7 +27,7 @@ func filterChains(m map[int]mapping) map[int]mapping {
 	return nm
 }
 
-func logChains(d data, all bool) {
+func logChains(d data, all bool, opts FilterOptions) {
 	mappings := d.mappings
 	if !all {
 		mappings = filterChains(d.mappings)
@@ -36,8 +37,7 @@ func logChains(d data, all bool) {
 		fmt.Println("No PR chains")
 		return
 	}
-
-	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, CLI.Log.Author, CLI.Log.ReviewStatus)
+	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, opts)
 }
 
 func printChildren(
@@ -46,25 +46,11 @@ func printChildren(
 	base, level int,
 	all bool,
 	output string,
-	author string,
-	reviewStatus string,
+	opts FilterOptions,
 ) {
 	for _, p := range mappings[base].following {
-		// Apply filters
-		if len(author) != 0 && d.prs[p].author != author {
+		if !ApplyPRFilters(d.prs[p], opts) {
 			continue
-		}
-		
-		// Review status filtering
-		switch reviewStatus {
-		case "approved":
-			if len(d.prs[p].approvedBy) == 0 {
-				continue
-			}
-		case "pending":
-			if len(d.prs[p].approvedBy) > 0 {
-				continue
-			}
 		}
 
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
@@ -78,7 +64,7 @@ func printChildren(
 			line = formatPR(d.prs[p], d.url)
 		}
 		fmt.Println(indent + line)
-		printChildren(d, mappings, p, level+1, all, output, author, reviewStatus)
+		printChildren(d, mappings, p, level+1, all, output, opts)
 	}
 }
 
@@ -133,15 +119,26 @@ func formatPR(p pr, url string) string {
 		number = green(number)
 	}
 
+	age := time.Since(p.createdAt)
+	ageStr := ""
+	switch {
+	case age < 24*time.Hour:
+		ageStr = fmt.Sprintf("%.0fh", age.Hours())
+	case age < 30*24*time.Hour:
+		ageStr = fmt.Sprintf("%.0fd", age.Hours()/24)
+	default:
+		ageStr = fmt.Sprintf("%.0fmo", age.Hours()/24/30)
+	}
+
 	line := fmt.Sprintf(
-		"\x1b]8;;%s/pull/%d\x07%s\x1b]8;;\x07 %s (%s) [%s]",
+		"\x1b]8;;%s/pull/%d\x07%s\x1b]8;;\x07 %s (%s) [%s] %s ago",
 		url,
 		p.number,
 		number,
 		p.title,
 		author,
-		p.head)
+		p.head,
+		ageStr)
 
 	return line
-
 }
