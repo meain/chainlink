@@ -70,25 +70,38 @@ func filterChain(d data, filter string) []int {
 	return prns[1:]
 }
 
-func openChain(d data, filter string, print bool, author string) {
+func openChain(d data, filter string, print bool, author string, reviewStatus string) {
 	prns := filterChain(d, filter)
 	if len(prns) == 0 {
 		fmt.Println("No PR chain found with filter")
 		return
 	}
 
-	if len(author) != 0 {
-		filteredPrns := []int{}
-		for _, p := range prns {
-			if d.prs[p].author == author {
-				filteredPrns = append(filteredPrns, p)
+	filteredPrns := []int{}
+	for _, p := range prns {
+		// Apply author filter
+		if len(author) != 0 && d.prs[p].author != author {
+			continue
+		}
+
+		// Apply review status filter
+		switch reviewStatus {
+		case "approved":
+			if len(d.prs[p].approvedBy) == 0 {
+				continue
+			}
+		case "pending":
+			if len(d.prs[p].approvedBy) > 0 {
+				continue
 			}
 		}
-		prns = filteredPrns
+
+		filteredPrns = append(filteredPrns, p)
 	}
+	prns = filteredPrns
 
 	if len(prns) == 0 {
-		fmt.Println("No PR chain found with filter and author")
+		fmt.Println("No PR chain found matching the filters")
 		return
 	}
 

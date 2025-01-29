@@ -37,7 +37,7 @@ func logChains(d data, all bool) {
 		return
 	}
 
-	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, CLI.Log.Author)
+	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, CLI.Log.Author, CLI.Log.ReviewStatus)
 }
 
 func printChildren(
@@ -47,10 +47,24 @@ func printChildren(
 	all bool,
 	output string,
 	author string,
+	reviewStatus string,
 ) {
 	for _, p := range mappings[base].following {
+		// Apply filters
 		if len(author) != 0 && d.prs[p].author != author {
 			continue
+		}
+		
+		// Review status filtering
+		switch reviewStatus {
+		case "approved":
+			if len(d.prs[p].approvedBy) == 0 {
+				continue
+			}
+		case "pending":
+			if len(d.prs[p].approvedBy) > 0 {
+				continue
+			}
 		}
 
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
@@ -64,7 +78,7 @@ func printChildren(
 			line = formatPR(d.prs[p], d.url)
 		}
 		fmt.Println(indent + line)
-		printChildren(d, mappings, p, level+1, all, output, author)
+		printChildren(d, mappings, p, level+1, all, output, author, reviewStatus)
 	}
 }
 
