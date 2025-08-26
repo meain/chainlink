@@ -13,7 +13,7 @@ import (
 
 var CLI struct {
 	Log struct {
-		Output       string   `help:"How to format the output (default,small,markdown)" enum:"default,small,markdown" default:"default"`
+		Output       string   `help:"How to format the output (default,small,markdown,json)" enum:"default,small,markdown,json" default:"default"`
 		All          bool     `help:"Print all PRs and not just chains"`
 		Author       string   `help:"Filter by author"`
 		ReviewStatus string   `help:"Filter by review status (approved,pending,unapproved,changes-requested,all)" enum:"approved,pending,unapproved,changes-requested,all" default:"all"`
@@ -25,6 +25,7 @@ var CLI struct {
 	} `cmd:"" help:"Log PR chains"`
 
 	Open struct {
+		Output       string   `help:"How to format the output (default,json)" enum:"default,json" default:"default"`
 		Filter       string   `arg:"" help:"Number or branch to select chain"`
 		Print        bool     `help:"Print URLs instead of opening"`
 		Author       string   `help:"Filter by author"`
@@ -37,6 +38,7 @@ var CLI struct {
 	} `cmd:"" help:"Open specific PR chain"`
 
 	Rebase struct {
+		Output string `help:"How to format the output (default,json)" enum:"default,json" default:"default"`
 		Filter string `arg:"" help:"Number or branch to select chain"`
 		Push   bool   `help:"Push changes to upstream"`
 		Args   string `help:"Extra args for pushing" default:"--force-with-lease"`
@@ -134,7 +136,7 @@ func main() {
 			Age:          CLI.Open.Age,
 			Size:         CLI.Open.Size,
 		}
-		openChain(data, CLI.Open.Filter, CLI.Open.Print, opts)
+		openChain(data, CLI.Open.Filter, CLI.Open.Print, CLI.Open.Output, opts)
 	case "rebase <filter>":
 		err := rebaseChain(
 			data,
@@ -142,7 +144,8 @@ func main() {
 			CLI.Rebase.Push,
 			CLI.Rebase.Run,
 			CLI.Rebase.Args,
-			CLI.Rebase.Shell)
+			CLI.Rebase.Shell,
+			CLI.Rebase.Output)
 		if err != nil {
 			log.Fatal(err)
 		}

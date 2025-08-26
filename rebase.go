@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,28 +14,56 @@ func rebaseChain(
 	push, run bool,
 	args string,
 	shell string,
+	output string,
 ) error {
 	prns := filterChain(d, filter)
 	if len(prns) == 0 {
-		fmt.Println("No PR chain found with filter")
+		if output == "json" {
+			jsonOutput := JSONRebaseOutput{
+				Script:   "",
+				Commands: []string{},
+			}
+			outputBytes, _ := json.MarshalIndent(jsonOutput, "", "  ")
+			fmt.Println(string(outputBytes))
+		} else {
+			fmt.Println("No PR chain found with filter")
+		}
 		return nil
 	}
 
 	lines := []string{"#!/bin/sh", "", "set -e"}
+	commands := []string{}
 
 	for _, p := range prns {
+		checkoutCmd := fmt.Sprintf("git checkout %s", d.prs[p].head)
+		rebaseCmd := fmt.Sprintf("git rebase --update-refs %s", d.prs[p].base)
+
 		lines = append(
 			lines,
 			"",
-			fmt.Sprintf("git checkout %s", d.prs[p].head),
-			fmt.Sprintf("git rebase --update-refs %s", d.prs[p].base))
+			checkoutCmd,
+			rebaseCmd)
+
+		commands = append(commands, checkoutCmd, rebaseCmd)
 
 		if push {
-			lines = append(lines, fmt.Sprintf("git push %s", args))
+			pushCmd := fmt.Sprintf("git push %s", args)
+			lines = append(lines, pushCmd)
+			commands = append(commands, pushCmd)
 		}
 	}
 
 	script := strings.Join(lines, "\n")
+
+	if output == "json" {
+		jsonOutput := JSONRebaseOutput{
+			Script:   script,
+			Commands: commands,
+		}
+		outputBytes, _ := json.MarshalIndent(jsonOutput, "", "  ")
+		fmt.Println(string(outputBytes))
+		return nil
+	}
 
 	if run {
 		if shell == "$SHELL" {

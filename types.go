@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type Response struct {
 	Data struct {
 		Repository struct {
@@ -57,4 +59,36 @@ type Response struct {
 		} `json:"locations"`
 		Message string `json:"message"`
 	} `json:"errors"`
+}
+
+type JSONPullRequest struct {
+	Number              int       `json:"number"`
+	Base                string    `json:"base"`
+	Head                string    `json:"head"`
+	Title               string    `json:"title"`
+	Author              string    `json:"author"`
+	ApprovedBy          string    `json:"approvedBy"`
+	HasChangesRequested bool      `json:"hasChangesRequested"`
+	HasComments         bool      `json:"hasComments"`
+	Labels              []string  `json:"labels"`
+	IsDraft             bool      `json:"isDraft"`
+	CreatedAt           time.Time `json:"createdAt"`
+	Reviewers           []string  `json:"reviewers"`
+	Additions           int       `json:"additions"`
+	Deletions           int       `json:"deletions"`
+	URL                 string    `json:"url"`
+}
+
+type JSONChain struct {
+	PullRequest JSONPullRequest `json:"pullRequest"`
+	Children    []JSONChain     `json:"children"`
+}
+
+type JSONOutput struct {
+	Chains []JSONChain `json:"chains"`
+}
+
+type JSONRebaseOutput struct {
+	Script   string   `json:"script"`
+	Commands []string `json:"commands"`
 }

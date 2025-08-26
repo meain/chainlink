@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,10 +35,23 @@ func logChains(d data, all bool, opts FilterOptions) {
 	}
 
 	if len(mappings) == 0 {
-		fmt.Println("No PR chains")
+		if CLI.Log.Output == "json" {
+			jsonOutput := JSONOutput{Chains: []JSONChain{}}
+			output, _ := json.Marshal(jsonOutput)
+			fmt.Println(string(output))
+		} else {
+			fmt.Println("No PR chains")
+		}
 		return
 	}
-	printChildren(d, mappings, 0, 0, all, CLI.Log.Output, opts)
+
+	if CLI.Log.Output == "json" {
+		jsonOutput := buildJSONOutput(d, mappings, 0, opts)
+		output, _ := json.MarshalIndent(jsonOutput, "", "  ")
+		fmt.Println(string(output))
+	} else {
+		printChildren(d, mappings, 0, 0, all, CLI.Log.Output, opts)
+	}
 }
 
 func printChildren(
@@ -141,4 +155,51 @@ func formatPR(p pr, url string) string {
 		ageStr)
 
 	return line
+}
+
+func buildJSONOutput(d data, mappings map[int]mapping, base int, opts FilterOptions) JSONOutput {
+	chains := []JSONChain{}
+	for _, p := range mappings[base].following {
+		if !ApplyPRFilters(d.prs[p], opts) {
+			continue
+		}
+		chain := buildJSONChain(d, mappings, p, opts)
+		chains = append(chains, chain)
+	}
+	return JSONOutput{Chains: chains}
+}
+
+func buildJSONChain(d data, mappings map[int]mapping, prNumber int, opts FilterOptions) JSONChain {
+	p := d.prs[prNumber]
+	jsonPR := JSONPullRequest{
+		Number:              p.number,
+		Base:                p.base,
+		Head:                p.head,
+		Title:               p.title,
+		Author:              p.author,
+		ApprovedBy:          p.approvedBy,
+		HasChangesRequested: p.hasChangesRequested,
+		HasComments:         p.hasComments,
+		Labels:              p.labels,
+		IsDraft:             p.isDraft,
+		CreatedAt:           p.createdAt,
+		Reviewers:           p.reviewers,
+		Additions:           p.additions,
+		Deletions:           p.deletions,
+		URL:                 fmt.Sprintf("%s/pull/%d", d.url, p.number),
+	}
+
+	children := []JSONChain{}
+	for _, childPR := range mappings[prNumber].following {
+		if !ApplyPRFilters(d.prs[childPR], opts) {
+			continue
+		}
+		childChain := buildJSONChain(d, mappings, childPR, opts)
+		children = append(children, childChain)
+	}
+
+	return JSONChain{
+		PullRequest: jsonPR,
+		Children:    children,
+	}
 }

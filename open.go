@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -70,25 +71,65 @@ func filterChain(d data, filter string) []int {
 	return prns[1:]
 }
 
-func openChain(d data, filter string, print bool, opts FilterOptions) {
+func openChain(d data, filter string, print bool, output string, opts FilterOptions) {
 	prns := filterChain(d, filter)
 	if len(prns) == 0 {
-		fmt.Println("No PR chain found with filter")
+		if output == "json" {
+			jsonOutput := JSONOutput{Chains: []JSONChain{}}
+			outputBytes, _ := json.MarshalIndent(jsonOutput, "", "  ")
+			fmt.Println(string(outputBytes))
+		} else {
+			fmt.Println("No PR chain found with filter")
+		}
 		return
 	}
 
 	prns = FilterPRNumbers(d, prns, opts)
 
 	if len(prns) == 0 {
-		fmt.Println("No PR chain found matching the filters")
+		if output == "json" {
+			jsonOutput := JSONOutput{Chains: []JSONChain{}}
+			outputBytes, _ := json.MarshalIndent(jsonOutput, "", "  ")
+			fmt.Println(string(outputBytes))
+		} else {
+			fmt.Println("No PR chain found matching the filters")
+		}
 		return
 	}
 
-	for _, p := range prns {
-		if print {
-			fmt.Println(fmt.Sprintf("%s/pull/%d", d.url, p))
-		} else {
-			openBrowser(fmt.Sprintf("%s/pull/%d", d.url, p))
+	if output == "json" {
+		chains := []JSONChain{}
+		for _, prNum := range prns {
+			p := d.prs[prNum]
+			jsonPR := JSONPullRequest{
+				Number:              p.number,
+				Base:                p.base,
+				Head:                p.head,
+				Title:               p.title,
+				Author:              p.author,
+				ApprovedBy:          p.approvedBy,
+				HasChangesRequested: p.hasChangesRequested,
+				HasComments:         p.hasComments,
+				Labels:              p.labels,
+				IsDraft:             p.isDraft,
+				CreatedAt:           p.createdAt,
+				Reviewers:           p.reviewers,
+				Additions:           p.additions,
+				Deletions:           p.deletions,
+				URL:                 fmt.Sprintf("%s/pull/%d", d.url, p.number),
+			}
+			chains = append(chains, JSONChain{PullRequest: jsonPR, Children: []JSONChain{}})
+		}
+		jsonOutput := JSONOutput{Chains: chains}
+		outputBytes, _ := json.MarshalIndent(jsonOutput, "", "  ")
+		fmt.Println(string(outputBytes))
+	} else {
+		for _, p := range prns {
+			if print {
+				fmt.Println(fmt.Sprintf("%s/pull/%d", d.url, p))
+			} else {
+				openBrowser(fmt.Sprintf("%s/pull/%d", d.url, p))
+			}
 		}
 	}
 }
