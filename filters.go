@@ -67,6 +67,10 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 		if len(pr.approvedBy) > 0 {
 			return false
 		}
+	case "changes-requested":
+		if !pr.hasChangesRequested {
+			return false
+		}
 	}
 
 	// Apply labels filter

@@ -20,6 +20,7 @@ type Response struct {
 						Reviews     struct {
 							Edges []struct {
 								Node struct {
+									State  string `json:"state"`
 									Author struct {
 										Login string `json:"login"`
 									} `json:"author"`
@@ -31,8 +32,8 @@ type Response struct {
 								Name string `json:"name"`
 							} `json:"nodes"`
 						} `json:"labels"`
-						IsDraft    bool      `json:"isDraft"`
-						CreatedAt  string    `json:"createdAt"`
+						IsDraft        bool   `json:"isDraft"`
+						CreatedAt      string `json:"createdAt"`
 						ReviewRequests struct {
 							Nodes []struct {
 								RequestedReviewer struct {

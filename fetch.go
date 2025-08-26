@@ -20,18 +20,20 @@ const githubURL = "https://api.github.com/graphql"
 var request string
 
 type pr struct {
-	number     int
-	base       string
-	head       string
-	title      string
-	author     string
-	approvedBy string
-	labels     []string
-	isDraft    bool
-	createdAt  time.Time
-	reviewers  []string
-	additions  int
-	deletions  int
+	number              int
+	base                string
+	head                string
+	title               string
+	author              string
+	approvedBy          string
+	hasChangesRequested bool
+	hasComments         bool
+	labels              []string
+	isDraft             bool
+	createdAt           time.Time
+	reviewers           []string
+	additions           int
+	deletions           int
 }
 
 type mapping struct {
@@ -157,9 +159,22 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 	for _, p := range resp.Data.Repository.PullRequests.Edges {
 		n := p.Node
 
-		aby := "" // We filter by approved reviews in graphql query
-		if len(n.Reviews.Edges) > 0 {
-			aby = n.Reviews.Edges[0].Node.Author.Login
+		aby := ""
+		hasChangesRequested := false
+		hasComments := false
+
+		// Process all reviews to determine states
+		for _, review := range n.Reviews.Edges {
+			switch review.Node.State {
+			case "APPROVED":
+				if aby == "" { // Take first approver
+					aby = review.Node.Author.Login
+				}
+			case "CHANGES_REQUESTED":
+				hasChangesRequested = true
+			case "COMMENTED":
+				hasComments = true
+			}
 		}
 
 		labels := make([]string, 0)
@@ -177,18 +192,20 @@ func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
 		createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
 
 		mpr := pr{
-			number:     n.Number,
-			head:       n.HeadRefName,
-			base:       n.BaseRefName,
-			author:     n.Author.Login,
-			title:      n.Title,
-			approvedBy: aby,
-			labels:     labels,
-			isDraft:    n.IsDraft,
-			createdAt:  createdAt,
-			reviewers:  reviewers,
-			additions:  n.Additions,
-			deletions:  n.Deletions,
+			number:              n.Number,
+			head:                n.HeadRefName,
+			base:                n.BaseRefName,
+			author:              n.Author.Login,
+			title:               n.Title,
+			approvedBy:          aby,
+			hasChangesRequested: hasChangesRequested,
+			hasComments:         hasComments,
+			labels:              labels,
+			isDraft:             n.IsDraft,
+			createdAt:           createdAt,
+			reviewers:           reviewers,
+			additions:           n.Additions,
+			deletions:           n.Deletions,
 		}
 
 		d.prs[n.Number] = mpr
