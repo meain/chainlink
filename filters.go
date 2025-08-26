@@ -63,6 +63,10 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 		if len(pr.approvedBy) > 0 {
 			return false
 		}
+	case "unapproved":
+		if len(pr.approvedBy) > 0 {
+			return false
+		}
 	}
 
 	// Apply labels filter

@@ -16,7 +16,7 @@ var CLI struct {
 		Output       string   `help:"How to format the output (default,small,markdown)" enum:"default,small,markdown" default:"default"`
 		All          bool     `help:"Print all PRs and not just chains"`
 		Author       string   `help:"Filter by author"`
-		ReviewStatus string   `help:"Filter by review status (approved,pending,all)" enum:"approved,pending,all" default:"all"`
+		ReviewStatus string   `help:"Filter by review status (approved,pending,unapproved,all)" enum:"approved,pending,unapproved,all" default:"all"`
 		Labels       []string `help:"Filter by labels"`
 		Reviewer     string   `help:"Filter by assigned reviewer"`
 		DraftStatus  string   `help:"Filter by draft status (draft,ready,all)" enum:"draft,ready,all" default:"all"`
@@ -28,7 +28,7 @@ var CLI struct {
 		Filter       string   `arg:"" help:"Number or branch to select chain"`
 		Print        bool     `help:"Print URLs instead of opening"`
 		Author       string   `help:"Filter by author"`
-		ReviewStatus string   `help:"Filter by review status (approved,pending,all)" enum:"approved,pending,all" default:"all"`
+		ReviewStatus string   `help:"Filter by review status (approved,pending,unapproved,all)" enum:"approved,pending,unapproved,all" default:"all"`
 		Labels       []string `help:"Filter by labels"`
 		Reviewer     string   `help:"Filter by assigned reviewer"`
 		DraftStatus  string   `help:"Filter by draft status (draft,ready,all)" enum:"draft,ready,all" default:"all"`
