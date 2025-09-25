@@ -110,8 +110,8 @@ func main() {
 	}
 
 	if len(data.prs) == 0 {
-		fmt.Println("No PRs and therefore no chains")
-		return
+		fmt.Fprintln(os.Stderr, "No PRs and therefore no chains")
+		os.Exit(1)
 	}
 
 	switch cmd {
