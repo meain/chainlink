@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -77,11 +78,8 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 	if len(opts.Labels) > 0 {
 		hasLabel := false
 		for _, wantLabel := range opts.Labels {
-			for _, label := range pr.labels {
-				if label == wantLabel {
-					hasLabel = true
-					break
-				}
+			if slices.Contains(pr.labels, wantLabel) {
+				hasLabel = true
 			}
 			if hasLabel {
 				break
@@ -94,13 +92,7 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 
 	// Apply reviewer filter
 	if len(opts.Reviewer) > 0 {
-		hasReviewer := false
-		for _, reviewer := range pr.reviewers {
-			if reviewer == opts.Reviewer {
-				hasReviewer = true
-				break
-			}
-		}
+		hasReviewer := slices.Contains(pr.reviewers, opts.Reviewer)
 		if !hasReviewer {
 			return false
 		}

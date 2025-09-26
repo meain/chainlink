@@ -63,10 +63,6 @@ func printChildren(
 	opts FilterOptions,
 ) {
 	for _, p := range mappings[base].following {
-		if !ApplyPRFilters(d.prs[p], opts) {
-			continue
-		}
-
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
 		var line string
 		switch output {
@@ -77,8 +73,18 @@ func printChildren(
 		default:
 			line = formatPR(d.prs[p], d.url)
 		}
-		fmt.Println(indent + line)
-		printChildren(d, mappings, p, level+1, all, output, opts)
+
+		// This is necessary as otherwise if a parent PR is filtered
+		// out, its children won't be printed. For example, if I want
+		// to get the list of unapproved PRs, I want to see all
+		// unapproved PRs in the chain, even if their parent PRs are
+		// approved.
+		if ApplyPRFilters(d.prs[p], opts) {
+			fmt.Println(indent + line)
+			level++
+		}
+
+		printChildren(d, mappings, p, level, all, output, opts)
 	}
 }
 
