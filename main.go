@@ -104,7 +104,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, err := getData(context.TODO(), org, repo, !CLI.NoCache)
+	data, err := getData(context.Background(), org, repo, !CLI.NoCache)
 	if err != nil {
 		log.Fatal(err)
 	}

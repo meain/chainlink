@@ -63,6 +63,7 @@ func printChildren(
 	opts FilterOptions,
 ) {
 	for _, p := range mappings[base].following {
+		newLevel := level
 		indent := strings.Repeat("  ", level) // TODO: print a tree like structure
 		var line string
 		switch output {
@@ -81,10 +82,10 @@ func printChildren(
 		// approved.
 		if ApplyPRFilters(d.prs[p], opts) {
 			fmt.Println(indent + line)
-			level++
+			newLevel++
 		}
 
-		printChildren(d, mappings, p, level, all, output, opts)
+		printChildren(d, mappings, p, newLevel, all, output, opts)
 	}
 }
 
