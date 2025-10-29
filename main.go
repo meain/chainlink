@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/tcnksm/go-gitconfig"
@@ -46,8 +47,9 @@ var CLI struct {
 		Shell  string `help:"Shell for running commands" default:"$SHELL"`
 	} `cmd:"" help:"Rebase specific PR chain"`
 
-	Repo    string `help:"Repository to operate on (default: current)"`
-	NoCache bool   `help:"Ignore cache (cached for 1m)"` // TODO: not sure if cache will be a bad idea
+	Repo      string `help:"Repository to operate on (default: current)"`
+	NoCache   bool   `help:"Ignore cache"`
+	CacheTime string `help:"Cache duration (e.g., 1m, 5m, 1h)" default:"1m"`
 }
 
 func getOrgRepo(arg string) (string, string, error) {
@@ -104,7 +106,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	data, err := getData(context.Background(), org, repo, !CLI.NoCache)
+	var cacheTime time.Duration
+	if !CLI.NoCache {
+		var err error
+		cacheTime, err = time.ParseDuration(CLI.CacheTime)
+		if err != nil {
+			log.Fatalf("Invalid cache time format '%s': %v", CLI.CacheTime, err)
+		}
+	}
+
+	data, err := getData(context.Background(), org, repo, !CLI.NoCache, cacheTime)
 	if err != nil {
 		log.Fatal(err)
 	}

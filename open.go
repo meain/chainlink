@@ -134,6 +134,10 @@ func openChain(d data, filter string, print bool, output string, opts FilterOpti
 	}
 }
 
+// openBrowser is a simple cross platform way to open the url in the
+// default browser. It uses the default opening commands for each platform.
+// NOTE: If the platform is not supported, it will just print the url
+// to the console.
 func openBrowser(url string) error {
 	var cmd *exec.Cmd
 

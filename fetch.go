@@ -50,7 +50,6 @@ type data struct {
 }
 
 const CACHE_DIR_BASE = "/tmp/chainlink" // TODO: make cross platform
-const CACHE_INTERVAL = 1 * time.Minute
 
 func getToken() (string, error) {
 	token := os.Getenv("CHAINLINK_TOKEN")
@@ -61,12 +60,12 @@ func getToken() (string, error) {
 	return "", fmt.Errorf("missing GitHub token in CHAINLINK_TOKEN")
 }
 
-func fetchData(org, repo string, cache bool) ([]byte, error) {
+func fetchData(org, repo string, cache bool, cacheTime time.Duration) ([]byte, error) {
 	cacheFile := fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
 
 	if cache {
 		if st, err := os.Stat(cacheFile); !os.IsNotExist(err) {
-			if time.Now().Sub(st.ModTime()) < CACHE_INTERVAL {
+			if time.Now().Sub(st.ModTime()) < cacheTime {
 				bts, err := os.ReadFile(cacheFile)
 				if err == nil {
 					return bts, nil
@@ -127,14 +126,14 @@ func makeRequest(org string, repo string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func getData(ctx context.Context, org, repo string, cache bool) (data, error) {
+func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.Duration) (data, error) {
 	d := data{
 		prs:      map[int]pr{},
 		branch:   map[string]int{},
 		mappings: map[int]mapping{},
 	}
 
-	response, err := fetchData(org, repo, cache)
+	response, err := fetchData(org, repo, cache, cacheTime)
 	if err != nil {
 		return d, err
 	}
