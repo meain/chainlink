@@ -23,7 +23,7 @@ var CLI struct {
 		DraftStatus  string   `help:"Filter by draft status (draft,ready,all)" enum:"draft,ready,all" default:"all"`
 		Age          string   `help:"Filter by age (e.g., 24h, 7d)"`
 		Size         string   `help:"Filter by PR size (small,medium,large,all)" enum:"small,medium,large,all" default:"all"`
-	} `cmd:"" help:"Log PR chains"`
+	} `cmd:"" help:"Log PR chains" default:"1"`
 
 	Open struct {
 		Output       string   `help:"How to format the output (default,json)" enum:"default,json" default:"default"`
@@ -95,11 +95,8 @@ func getOrgRepo(arg string) (string, string, error) {
 }
 
 func main() {
-	cmd := "log"
-	if len(os.Args) > 1 {
-		ctx := kong.Parse(&CLI)
-		cmd = ctx.Command()
-	}
+	ctx := kong.Parse(&CLI)
+	cmd := ctx.Command()
 
 	org, repo, err := getOrgRepo(CLI.Repo)
 	if err != nil {
