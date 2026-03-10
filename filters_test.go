@@ -8,14 +8,25 @@ import (
 func TestApplyPRFilters_Author(t *testing.T) {
 	p := pr{number: 1, author: "alice"}
 
-	if !ApplyPRFilters(p, FilterOptions{}) {
-		t.Error("empty filter should match")
+	tests := []struct {
+		name   string
+		author string
+		want   bool
+	}{
+		{"empty filter", "", true},
+		{"matching author", "alice", true},
+		{"non-matching author", "bob", false},
+		{"exclude matching author", "-alice", false},
+		{"exclude non-matching author", "-bob", true},
 	}
-	if !ApplyPRFilters(p, FilterOptions{Author: "alice"}) {
-		t.Error("matching author should pass")
-	}
-	if ApplyPRFilters(p, FilterOptions{Author: "bob"}) {
-		t.Error("non-matching author should fail")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ApplyPRFilters(p, FilterOptions{Author: tt.author})
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -66,6 +77,10 @@ func TestApplyPRFilters_Labels(t *testing.T) {
 		{"no match", p, []string{"feature"}, false},
 		{"no labels on PR", noLabels, []string{"bug"}, false},
 		{"empty filter", p, []string{}, true},
+		{"exclude matching label", p, []string{"-bug"}, false},
+		{"exclude non-matching label", p, []string{"-feature"}, true},
+		{"include and exclude both match", p, []string{"bug", "-urgent"}, false},
+		{"include match, exclude no match", p, []string{"bug", "-feature"}, true},
 	}
 
 	for _, tt := range tests {
@@ -184,6 +199,87 @@ func TestApplyPRFilters_Size(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ApplyPRFilters(tt.pr, FilterOptions{Size: tt.size})
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyPRFilters_Mergeable(t *testing.T) {
+	tests := []struct {
+		name      string
+		mergeable string
+		filter    string
+		want      bool
+	}{
+		{"mergeable matches mergeable", "mergeable", "mergeable", true},
+		{"conflicting fails mergeable", "conflicting", "mergeable", false},
+		{"unknown fails mergeable", "unknown", "mergeable", false},
+		{"conflicting matches conflicting", "conflicting", "conflicting", true},
+		{"mergeable fails conflicting", "mergeable", "conflicting", false},
+		{"empty filter matches any", "conflicting", "", true},
+		{"all matches any", "mergeable", "all", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ApplyPRFilters(pr{mergeable: tt.mergeable}, FilterOptions{Mergeable: tt.filter})
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyPRFilters_Checks(t *testing.T) {
+	tests := []struct {
+		name        string
+		checksState string
+		filter      string
+		want        bool
+	}{
+		{"success matches pass", "success", "pass", true},
+		{"failure fails pass", "failure", "pass", false},
+		{"failure matches fail", "failure", "fail", true},
+		{"error matches fail", "error", "fail", true},
+		{"success fails fail", "success", "fail", false},
+		{"pending matches pending", "pending", "pending", true},
+		{"expected matches pending", "expected", "pending", true},
+		{"success fails pending", "success", "pending", false},
+		{"empty filter matches any", "failure", "", true},
+		{"all matches any", "failure", "all", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ApplyPRFilters(pr{checksState: tt.checksState}, FilterOptions{Checks: tt.filter})
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyPRFilters_UpdatedSince(t *testing.T) {
+	recent := pr{number: 1, updatedAt: time.Now().Add(-1 * time.Hour)}
+	stale := pr{number: 2, updatedAt: time.Now().Add(-48 * time.Hour)}
+
+	tests := []struct {
+		name string
+		pr   pr
+		dur  string
+		want bool
+	}{
+		{"recent within 24h", recent, "24h", true},
+		{"stale outside 24h", stale, "24h", false},
+		{"stale within 7d", stale, "7d", true},
+		{"empty filter", stale, "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ApplyPRFilters(tt.pr, FilterOptions{UpdatedSince: tt.dur})
 			if got != tt.want {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
