@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -58,21 +59,7 @@ var CLI struct {
 	CacheTime string `help:"Cache duration (e.g., 1m, 5m, 1h)" default:"1m"`
 }
 
-func getOrgRepo(arg string) (string, string, error) {
-	if len(arg) > 0 {
-		splits := strings.Split(arg, "/")
-		if len(splits) != 2 {
-			return "", "", fmt.Errorf("unknown repo format: %s", arg)
-		}
-
-		return splits[0], splits[1], nil
-	}
-
-	url, err := gitconfig.OriginURL()
-	if err != nil {
-		return "", "", fmt.Errorf("unable to read url in gitconfig: %v", err)
-	}
-
+func parseRepoURL(url string) (string, string, error) {
 	if strings.HasPrefix(url, "git@") {
 		url = strings.TrimSuffix(url, ".git")
 
@@ -96,8 +83,48 @@ func getOrgRepo(arg string) (string, string, error) {
 		return splits[3], splits[4], nil
 	}
 
-	return "", "", fmt.Errorf("could not parse repository")
+	return "", "", fmt.Errorf("could not parse repository URL: %s", url)
+}
 
+func getOriginURL() (string, error) {
+	// Try git first
+	url, err := gitconfig.OriginURL()
+	if err == nil {
+		return url, nil
+	}
+
+	// Fall back to jj for non-colocated repos
+	out, jjErr := exec.Command("jj", "git", "remote", "list").Output()
+	if jjErr != nil {
+		return "", fmt.Errorf("unable to read origin url from git (%v) or jj (%v)", err, jjErr)
+	}
+
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == "origin" {
+			return fields[1], nil
+		}
+	}
+
+	return "", fmt.Errorf("no origin remote found in git (%v) or jj", err)
+}
+
+func getOrgRepo(arg string) (string, string, error) {
+	if len(arg) > 0 {
+		splits := strings.Split(arg, "/")
+		if len(splits) != 2 {
+			return "", "", fmt.Errorf("unknown repo format: %s", arg)
+		}
+
+		return splits[0], splits[1], nil
+	}
+
+	url, err := getOriginURL()
+	if err != nil {
+		return "", "", err
+	}
+
+	return parseRepoURL(url)
 }
 
 func buildFilterOptions(
