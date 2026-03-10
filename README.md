@@ -2,64 +2,25 @@
 
 > Manage GitHub PR chains with ease
 
-`chainlink` simplifies the management of PR chains on GitHub, allowing you to efficiently log, open, and rebase them.
+`chainlink` discovers PR dependency chains in a GitHub repository and lets you visualize, open, and rebase them. It works by inspecting each PR's base branch -- if PR B targets PR A's branch instead of `main`, they form a chain.
 
-## Features
+## Install
 
-- **Log PR chains**: Visualize your PR chains and their dependencies in a clear, hierarchical format.
-  - `--all` to print all PRs and not just chains.
-  - `--output <format>` to change output format (`default`, `small`, `markdown`, `json`).
-  - Use filters to narrow down the list (see [Filter Options](#filter-options-summary)).
-  - Example:
-    ```
-    $ chainlink log --repo alcionai/corso --author ashmrtn --review-status approved
-    ```
+```bash
+go install github.com/meain/chainlink@latest
+```
 
-- **Open PR chains**: Open an entire PR chain in your browser, in the correct dependency order, with a single command.
-  - Select a chain by branch name or PR number.
-  - `--print` to print URLs instead of opening them in the browser.
-  - `--output <format>` to change output format (`default`, `json`).
-  - Supports the same filters as `log` to help you find the right chain.
-  - Example:
-    ```
-    $ chainlink open --repo alcionai/corso group-cli
-    ```
+Requires a GitHub token with `repo` scope:
 
-- **Rebase PR chains**:  Rebase a complete PR chain onto `main` (or another branch) to keep your branches up-to-date.
-  - Automatically handles the correct rebase order based on PR dependencies.
-  - `--push` flag to automatically push rebased branches.
-  - `--args` to customize push arguments (default: `--force-with-lease`).
-  - `--run` to execute the rebase commands directly instead of printing them.
-  - `--shell` to specify the shell for running commands (default: `$SHELL`).
-  - `--output <format>` to change output format (`default`, `json`).
-  - Example:
-    ```
-    $ chainlink rebase 3217-model-mod-time --push
-    ```
-    This will output and optionally run shell commands to rebase the chain.
+```bash
+export CHAINLINK_TOKEN="ghp_..."
+```
 
-## Configuration
+See [Token Setup](#token-setup) for details.
 
-You need a GitHub personal access token to use `chainlink`. Set it as an environment variable: `CHAINLINK_TOKEN`.
+## Usage
 
-### How to get `CHAINLINK_TOKEN`
-
-1. Go to [GitHub Personal Access Tokens](https://github.com/settings/tokens).
-2. Click "Generate new token" > "Generate new token (classic)".
-3. Give it a descriptive "Note" and set an "Expiration" if desired.
-4. In "Select scopes", check the "repo" scope.
-5. Click "Generate token".
-6. Copy the generated token and set it as an environment variable:
-   ```bash
-   export CHAINLINK_TOKEN="gh_your_token_here"
-   ```
-   For public repositories, consider using a [fine-grained token](https://github.com/settings/tokens?type=beta) with read-only access for enhanced security.
-
-## Examples
-
-### Log PR chains
-
-_Approved PRs are highlighted in green._
+### `log` -- Visualize PR chains
 
 ```
 $ chainlink log --repo alcionai/corso
@@ -73,7 +34,13 @@ $ chainlink log --repo alcionai/corso
  #4068 channels and messages API (neha-Gupta1) [HandlerImplemenation]
 ```
 
-### Open a PR chain
+Approved PRs are highlighted in green. Use `--all` to include standalone PRs (not just chains).
+
+Output formats: `--output default|small|markdown|json`
+
+### `open` -- Open a PR chain in the browser
+
+Select a chain by branch name or PR number:
 
 ```
 $ chainlink open --repo alcionai/corso group-cli
@@ -82,7 +49,11 @@ Opening https://github.com/alcionai/corso/pull/4030
 Opening https://github.com/alcionai/corso/pull/4043
 ```
 
-### Rebase a PR chain
+Use `--print` to print URLs without opening them.
+
+### `rebase` -- Rebase a PR chain
+
+Generates a shell script that rebases the chain in the correct dependency order:
 
 ```
 $ chainlink rebase 3217-model-mod-time --push
@@ -104,26 +75,113 @@ git rebase --update-refs 3217-model-mod-time
 git push --force-with-lease
 ```
 
+Use `--run` to execute directly instead of printing. Use `--push` to push after each rebase.
+
+## Filters
+
+Available on `log` and `open` commands:
+
+| Flag | Values |
+|---|---|
+| `--author` | GitHub username (prefix with `-` to exclude) |
+| `--reviewer` | Assigned reviewer |
+| `--review-status` | `approved`, `pending`, `unapproved`, `changes-requested`, `all` |
+| `--draft-status` | `draft`, `ready`, `all` |
+| `--labels` | Comma-separated (prefix with `-` to exclude) |
+| `--updated-since` | Duration, e.g. `24h`, `7d` |
+| `--created-since` | Duration, e.g. `24h`, `7d` |
+| `--size` | `small`, `medium`, `large`, `all` |
+| `--mergeable` | `mergeable`, `conflicting`, `all` |
+| `--checks` | `pass`, `fail`, `pending`, `all` |
+
+Examples:
+
+```bash
+# Show only my approved PRs
+chainlink log --author meain --review-status approved
+
+# Show PRs awaiting my review (excluding drafts, excluding my own)
+chainlink log --reviewer meain --review-status unapproved --draft-status ready --author=-meain
+
+# Show PRs updated in the last week
+chainlink log --updated-since 7d
+
+# Show conflicting PRs
+chainlink log --mergeable conflicting
+```
+
 ## Global Options
 
-- `--repo <org/repo>`: Repository to operate on (default: current directory's origin).
-- `--no-cache`: Ignore cached data.
-- `--cache-time <duration>`: Cache duration (default: `1m`). Examples: `1m`, `5m`, `1h`.
+| Flag | Default | Description |
+|---|---|---|
+| `--repo <org/repo>` | current directory's origin | Repository to operate on |
+| `--no-cache` | | Ignore cached data |
+| `--cache-time` | `1m` | Cache duration (e.g. `1m`, `5m`, `1h`) |
 
-## Filter Options Summary
+## Example Workflows
 
-These options are available for both `log` and `open` commands:
+### PR dashboard across multiple repos
 
-- `--author <author>` (prefix with `-` to exclude)
-- `--review-status <status>` (`approved`, `pending`, `unapproved`, `changes-requested`, `all`)
-- `--labels <label1>,<label2>` (prefix with `-` to exclude)
-- `--reviewer <reviewer>`
-- `--draft-status <status>` (`draft`, `ready`, `all`)
-- `--updated-since <duration>` (e.g., `24h`, `7d`)
-- `--created-since <duration>` (e.g., `24h`, `7d`)
-- `--size <size>` (`small`, `medium`, `large`, `all`)
-- `--mergeable <status>` (`mergeable`, `conflicting`, `all`)
-- `--checks <status>` (`pass`, `fail`, `pending`, `all`)
+Use `chainlink` with a list of repos to build a personal PR dashboard:
+
+```bash
+#!/bin/sh
+
+repos="
+org/repo-one
+org/repo-two
+org/repo-three
+"
+
+for repo in $repos; do
+    output=$(chainlink log --cache-time 5m --all --output markdown --repo "$repo" "$@" 2>/dev/null)
+    if [ -n "$output" ]; then
+        printf "# %s\n%s\n" "$repo" "$output"
+    fi
+done
+```
+
+### Quick review queue
+
+Find PRs that need your review across repos:
+
+```bash
+chainlink log --repo org/repo --reviewer yourname --review-status unapproved --draft-status ready --author=-yourname
+```
+
+### Merge-ready PRs
+
+Find your PRs that are approved and ready to merge:
+
+```bash
+chainlink log --repo org/repo --author yourname --review-status approved
+```
+
+### Daily standup helper
+
+Show all your pending PRs, formatted as markdown for pasting into chat:
+
+```bash
+chainlink log --repo org/repo --author yourname --review-status unapproved --output markdown
+```
+
+### Rebase and push in one shot
+
+```bash
+chainlink rebase my-feature-branch --push --run
+```
+
+## Token Setup
+
+1. Go to [GitHub Personal Access Tokens](https://github.com/settings/tokens).
+2. Click "Generate new token" > "Generate new token (classic)".
+3. Check the **repo** scope.
+4. Generate and export:
+   ```bash
+   export CHAINLINK_TOKEN="ghp_..."
+   ```
+
+For public repositories, a [fine-grained token](https://github.com/settings/tokens?type=beta) with read-only access works too.
 
 ## Alternatives
 
