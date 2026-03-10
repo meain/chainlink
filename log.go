@@ -165,15 +165,24 @@ func formatPR(p pr, url string) string {
 }
 
 func buildJSONOutput(d data, mappings map[int]mapping, base int, opts FilterOptions) JSONOutput {
+	chains := collectJSONChains(d, mappings, base, opts)
+	return JSONOutput{Chains: chains}
+}
+
+// collectJSONChains traverses children even when a parent doesn't match the
+// filter, promoting matching descendants so that chains aren't silently dropped.
+func collectJSONChains(d data, mappings map[int]mapping, base int, opts FilterOptions) []JSONChain {
 	chains := []JSONChain{}
 	for _, p := range mappings[base].following {
-		if !ApplyPRFilters(d.prs[p], opts) {
-			continue
+		if ApplyPRFilters(d.prs[p], opts) {
+			chain := buildJSONChain(d, mappings, p, opts)
+			chains = append(chains, chain)
+		} else {
+			// Parent doesn't match, but keep traversing children
+			chains = append(chains, collectJSONChains(d, mappings, p, opts)...)
 		}
-		chain := buildJSONChain(d, mappings, p, opts)
-		chains = append(chains, chain)
 	}
-	return JSONOutput{Chains: chains}
+	return chains
 }
 
 func buildJSONChain(d data, mappings map[int]mapping, prNumber int, opts FilterOptions) JSONChain {
@@ -196,14 +205,7 @@ func buildJSONChain(d data, mappings map[int]mapping, prNumber int, opts FilterO
 		URL:                 fmt.Sprintf("%s/pull/%d", d.url, p.number),
 	}
 
-	children := []JSONChain{}
-	for _, childPR := range mappings[prNumber].following {
-		if !ApplyPRFilters(d.prs[childPR], opts) {
-			continue
-		}
-		childChain := buildJSONChain(d, mappings, childPR, opts)
-		children = append(children, childChain)
-	}
+	children := collectJSONChains(d, mappings, prNumber, opts)
 
 	return JSONChain{
 		PullRequest: jsonPR,

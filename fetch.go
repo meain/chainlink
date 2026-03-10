@@ -162,12 +162,19 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 		hasChangesRequested := false
 		hasComments := false
 
-		// Process all reviews to determine states
+		// Track latest review state per user (last review wins)
+		latestReview := make(map[string]string)
 		for _, review := range n.Reviews.Edges {
-			switch review.Node.State {
+			login := review.Node.Author.Login
+			if login != "" {
+				latestReview[login] = review.Node.State
+			}
+		}
+		for login, state := range latestReview {
+			switch state {
 			case "APPROVED":
-				if aby == "" { // Take first approver
-					aby = review.Node.Author.Login
+				if aby == "" {
+					aby = login
 				}
 			case "CHANGES_REQUESTED":
 				hasChangesRequested = true
@@ -182,9 +189,21 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 		}
 
 		reviewers := make([]string, 0)
+		reviewerSeen := make(map[string]bool)
+		// Include users who have already submitted reviews
+		for _, review := range n.Reviews.Edges {
+			login := review.Node.Author.Login
+			if login != "" && !reviewerSeen[login] {
+				reviewers = append(reviewers, login)
+				reviewerSeen[login] = true
+			}
+		}
+		// Include pending review requests
 		for _, req := range n.ReviewRequests.Nodes {
-			if req.RequestedReviewer.Login != "" {
-				reviewers = append(reviewers, req.RequestedReviewer.Login)
+			login := req.RequestedReviewer.Login
+			if login != "" && !reviewerSeen[login] {
+				reviewers = append(reviewers, login)
+				reviewerSeen[login] = true
 			}
 		}
 
