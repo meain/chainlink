@@ -16,26 +16,32 @@ var CLI struct {
 	Log struct {
 		Output       string   `help:"How to format the output (default,small,markdown,json)" enum:"default,small,markdown,json" default:"default"`
 		All          bool     `help:"Print all PRs and not just chains"`
-		Author       string   `help:"Filter by author"`
+		Author       string   `help:"Filter by author (prefix with - to exclude)"`
 		ReviewStatus string   `help:"Filter by review status (approved,pending,unapproved,changes-requested,all)" enum:"approved,pending,unapproved,changes-requested,all" default:"all"`
-		Labels       []string `help:"Filter by labels"`
+		Labels       []string `help:"Filter by labels (prefix with - to exclude)"`
 		Reviewer     string   `help:"Filter by assigned reviewer"`
 		DraftStatus  string   `help:"Filter by draft status (draft,ready,all)" enum:"draft,ready,all" default:"all"`
-		Age          string   `help:"Filter by age (e.g., 24h, 7d)"`
 		Size         string   `help:"Filter by PR size (small,medium,large,all)" enum:"small,medium,large,all" default:"all"`
+		Mergeable    string   `help:"Filter by merge status (mergeable,conflicting,all)" enum:"mergeable,conflicting,all" default:"all"`
+		Checks       string   `help:"Filter by CI checks (pass,fail,pending,all)" enum:"pass,fail,pending,all" default:"all"`
+		UpdatedSince string   `help:"Filter by last update time (e.g., 24h, 7d)"`
+		CreatedSince string   `help:"Filter by creation time (e.g., 24h, 7d)"`
 	} `cmd:"" help:"Log PR chains" default:"1"`
 
 	Open struct {
 		Output       string   `help:"How to format the output (default,json)" enum:"default,json" default:"default"`
 		Filter       string   `arg:"" help:"Number or branch to select chain"`
 		Print        bool     `help:"Print URLs instead of opening"`
-		Author       string   `help:"Filter by author"`
+		Author       string   `help:"Filter by author (prefix with - to exclude)"`
 		ReviewStatus string   `help:"Filter by review status (approved,pending,unapproved,changes-requested,all)" enum:"approved,pending,unapproved,changes-requested,all" default:"all"`
-		Labels       []string `help:"Filter by labels"`
+		Labels       []string `help:"Filter by labels (prefix with - to exclude)"`
 		Reviewer     string   `help:"Filter by assigned reviewer"`
 		DraftStatus  string   `help:"Filter by draft status (draft,ready,all)" enum:"draft,ready,all" default:"all"`
-		Age          string   `help:"Filter by age (e.g., 24h, 7d)"`
 		Size         string   `help:"Filter by PR size (small,medium,large,all)" enum:"small,medium,large,all" default:"all"`
+		Mergeable    string   `help:"Filter by merge status (mergeable,conflicting,all)" enum:"mergeable,conflicting,all" default:"all"`
+		Checks       string   `help:"Filter by CI checks (pass,fail,pending,all)" enum:"pass,fail,pending,all" default:"all"`
+		UpdatedSince string   `help:"Filter by last update time (e.g., 24h, 7d)"`
+		CreatedSince string   `help:"Filter by creation time (e.g., 24h, 7d)"`
 	} `cmd:"" help:"Open specific PR chain"`
 
 	Rebase struct {
@@ -94,6 +100,32 @@ func getOrgRepo(arg string) (string, string, error) {
 
 }
 
+func buildFilterOptions(
+	author string,
+	reviewStatus string,
+	labels []string,
+	reviewer string,
+	draftStatus string,
+	size string,
+	mergeable string,
+	checks string,
+	updatedSince string,
+	createdSince string,
+) FilterOptions {
+	return FilterOptions{
+		Author:       author,
+		ReviewStatus: reviewStatus,
+		Labels:       labels,
+		Reviewer:     reviewer,
+		DraftStatus:  draftStatus,
+		Size:         size,
+		Mergeable:    mergeable,
+		Checks:       checks,
+		UpdatedSince: updatedSince,
+		CreatedSince: createdSince,
+	}
+}
+
 func main() {
 	ctx := kong.Parse(&CLI)
 	cmd := ctx.Command()
@@ -124,26 +156,34 @@ func main() {
 
 	switch cmd {
 	case "log":
-		opts := FilterOptions{
-			Author:       CLI.Log.Author,
-			ReviewStatus: CLI.Log.ReviewStatus,
-			Labels:       CLI.Log.Labels,
-			Reviewer:     CLI.Log.Reviewer,
-			DraftStatus:  CLI.Log.DraftStatus,
-			Age:          CLI.Log.Age,
-			Size:         CLI.Log.Size,
-		}
+		opts := buildFilterOptions(
+			CLI.Log.Author,
+			CLI.Log.ReviewStatus,
+			CLI.Log.Labels,
+			CLI.Log.Reviewer,
+			CLI.Log.DraftStatus,
+
+			CLI.Log.Size,
+			CLI.Log.Mergeable,
+			CLI.Log.Checks,
+			CLI.Log.UpdatedSince,
+			CLI.Log.CreatedSince,
+		)
 		logChains(data, CLI.Log.All, opts)
 	case "open <filter>":
-		opts := FilterOptions{
-			Author:       CLI.Open.Author,
-			ReviewStatus: CLI.Open.ReviewStatus,
-			Labels:       CLI.Open.Labels,
-			Reviewer:     CLI.Open.Reviewer,
-			DraftStatus:  CLI.Open.DraftStatus,
-			Age:          CLI.Open.Age,
-			Size:         CLI.Open.Size,
-		}
+		opts := buildFilterOptions(
+			CLI.Open.Author,
+			CLI.Open.ReviewStatus,
+			CLI.Open.Labels,
+			CLI.Open.Reviewer,
+			CLI.Open.DraftStatus,
+
+			CLI.Open.Size,
+			CLI.Open.Mergeable,
+			CLI.Open.Checks,
+			CLI.Open.UpdatedSince,
+			CLI.Open.CreatedSince,
+		)
 		openChain(data, CLI.Open.Filter, CLI.Open.Print, CLI.Open.Output, opts)
 	case "rebase <filter>":
 		err := rebaseChain(

@@ -31,6 +31,9 @@ type pr struct {
 	labels              []string
 	isDraft             bool
 	createdAt           time.Time
+	updatedAt           time.Time
+	mergeable           string
+	checksState         string
 	reviewers           []string
 	additions           int
 	deletions           int
@@ -208,6 +211,12 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 		}
 
 		createdAt, _ := time.Parse(time.RFC3339, n.CreatedAt)
+		updatedAt, _ := time.Parse(time.RFC3339, n.UpdatedAt)
+
+		checksState := ""
+		if len(n.Commits.Nodes) > 0 && n.Commits.Nodes[0].Commit.StatusCheckRollup != nil {
+			checksState = strings.ToLower(n.Commits.Nodes[0].Commit.StatusCheckRollup.State)
+		}
 
 		mpr := pr{
 			number:              n.Number,
@@ -221,6 +230,9 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 			labels:              labels,
 			isDraft:             n.IsDraft,
 			createdAt:           createdAt,
+			updatedAt:           updatedAt,
+			mergeable:           strings.ToLower(n.Mergeable),
+			checksState:         checksState,
 			reviewers:           reviewers,
 			additions:           n.Additions,
 			deletions:           n.Deletions,

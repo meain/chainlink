@@ -234,9 +234,9 @@ func TestCollectJSONChains_SizeFilter(t *testing.T) {
 	}
 }
 
-func TestCollectJSONChains_AgeFilter(t *testing.T) {
+func TestCollectJSONChains_CreatedSinceFilter(t *testing.T) {
 	// Chain: 0 -> 1(old) -> 2(recent)
-	// Filter age=24h: PR 1 filtered, PR 2 promoted
+	// Filter created-since=24h: PR 1 filtered, PR 2 promoted
 	d := makeTestData(
 		map[int]pr{
 			1: {number: 1, createdAt: time.Now().Add(-72 * time.Hour)},
@@ -249,7 +249,7 @@ func TestCollectJSONChains_AgeFilter(t *testing.T) {
 		},
 	)
 
-	opts := FilterOptions{Age: "24h"}
+	opts := FilterOptions{CreatedSince: "24h"}
 	output := buildJSONOutput(d, d.mappings, 0, opts)
 
 	if len(output.Chains) != 1 {

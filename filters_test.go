@@ -133,14 +133,14 @@ func TestApplyPRFilters_DraftStatus(t *testing.T) {
 	}
 }
 
-func TestApplyPRFilters_Age(t *testing.T) {
+func TestApplyPRFilters_CreatedSince(t *testing.T) {
 	recent := pr{number: 1, createdAt: time.Now().Add(-1 * time.Hour)}
 	old := pr{number: 2, createdAt: time.Now().Add(-48 * time.Hour)}
 
 	tests := []struct {
 		name string
 		pr   pr
-		age  string
+		dur  string
 		want bool
 	}{
 		{"recent within 24h", recent, "24h", true},
@@ -151,7 +151,7 @@ func TestApplyPRFilters_Age(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ApplyPRFilters(tt.pr, FilterOptions{Age: tt.age})
+			got := ApplyPRFilters(tt.pr, FilterOptions{CreatedSince: tt.dur})
 			if got != tt.want {
 				t.Errorf("got %v, want %v", got, tt.want)
 			}
@@ -208,8 +208,8 @@ func TestApplyPRFilters_Combined(t *testing.T) {
 		Author:   "alice",
 		Reviewer: "bob",
 		Labels:   []string{"bug"},
-		Size:     "small",
-		Age:      "24h",
+		Size:         "small",
+		CreatedSince: "24h",
 	}) {
 		t.Error("all matching filters should pass")
 	}

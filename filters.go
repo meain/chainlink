@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,15 +44,24 @@ type FilterOptions struct {
 	Labels       []string
 	Reviewer     string
 	DraftStatus  string // "draft", "ready", "all"
-	Age          string // "24h", "7d", etc.
 	Size         string // "small", "medium", "large", "all"
+	Mergeable    string // "mergeable", "conflicting", "all"
+	Checks       string // "pass", "fail", "pending", "all"
+	UpdatedSince string // "24h", "7d", etc.
+	CreatedSince string // "24h", "7d", etc.
 }
 
 // ApplyPRFilters filters a PR based on the given options
 func ApplyPRFilters(pr pr, opts FilterOptions) bool {
-	// Apply author filter
-	if len(opts.Author) != 0 && pr.author != opts.Author {
-		return false
+	// Apply author filter (prefix with - to exclude)
+	if len(opts.Author) != 0 {
+		if strings.HasPrefix(opts.Author, "-") {
+			if pr.author == opts.Author[1:] {
+				return false
+			}
+		} else if pr.author != opts.Author {
+			return false
+		}
 	}
 
 	// Apply review status filter
@@ -74,19 +84,37 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 		}
 	}
 
-	// Apply labels filter
+	// Apply labels filter (prefix with - to exclude)
 	if len(opts.Labels) > 0 {
-		hasLabel := false
-		for _, wantLabel := range opts.Labels {
-			if slices.Contains(pr.labels, wantLabel) {
-				hasLabel = true
-			}
-			if hasLabel {
-				break
+		includeLabels := []string{}
+		excludeLabels := []string{}
+		for _, l := range opts.Labels {
+			if strings.HasPrefix(l, "-") {
+				excludeLabels = append(excludeLabels, l[1:])
+			} else {
+				includeLabels = append(includeLabels, l)
 			}
 		}
-		if !hasLabel {
-			return false
+
+		// Check exclude labels: PR must not have any of these
+		for _, el := range excludeLabels {
+			if slices.Contains(pr.labels, el) {
+				return false
+			}
+		}
+
+		// Check include labels: PR must have at least one of these
+		if len(includeLabels) > 0 {
+			hasLabel := false
+			for _, wantLabel := range includeLabels {
+				if slices.Contains(pr.labels, wantLabel) {
+					hasLabel = true
+					break
+				}
+			}
+			if !hasLabel {
+				return false
+			}
 		}
 	}
 
@@ -110,11 +138,21 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 		}
 	}
 
-	// Apply age filter
-	if len(opts.Age) > 0 {
-		duration, err := parseDuration(opts.Age)
+	// Apply created-since filter
+	if len(opts.CreatedSince) > 0 {
+		duration, err := parseDuration(opts.CreatedSince)
 		if err == nil {
 			if time.Since(pr.createdAt) > duration {
+				return false
+			}
+		}
+	}
+
+	// Apply updated-since filter
+	if len(opts.UpdatedSince) > 0 {
+		duration, err := parseDuration(opts.UpdatedSince)
+		if err == nil {
+			if time.Since(pr.updatedAt) > duration {
 				return false
 			}
 		}
@@ -132,6 +170,34 @@ func ApplyPRFilters(pr pr, opts FilterOptions) bool {
 		}
 	case "large":
 		if pr.additions+pr.deletions <= 500 {
+			return false
+		}
+	}
+
+	// Apply mergeable filter
+	switch opts.Mergeable {
+	case "mergeable":
+		if pr.mergeable != "mergeable" {
+			return false
+		}
+	case "conflicting":
+		if pr.mergeable != "conflicting" {
+			return false
+		}
+	}
+
+	// Apply checks filter
+	switch opts.Checks {
+	case "pass":
+		if pr.checksState != "success" {
+			return false
+		}
+	case "fail":
+		if pr.checksState != "failure" && pr.checksState != "error" {
+			return false
+		}
+	case "pending":
+		if pr.checksState != "pending" && pr.checksState != "expected" {
 			return false
 		}
 	}

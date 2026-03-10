@@ -34,8 +34,19 @@ type Response struct {
 								Name string `json:"name"`
 							} `json:"nodes"`
 						} `json:"labels"`
-						IsDraft        bool   `json:"isDraft"`
-						CreatedAt      string `json:"createdAt"`
+						IsDraft   bool   `json:"isDraft"`
+						CreatedAt string `json:"createdAt"`
+						UpdatedAt string `json:"updatedAt"`
+						Mergeable string `json:"mergeable"`
+						Commits   struct {
+							Nodes []struct {
+								Commit struct {
+									StatusCheckRollup *struct {
+										State string `json:"state"`
+									} `json:"statusCheckRollup"`
+								} `json:"commit"`
+							} `json:"nodes"`
+						} `json:"commits"`
 						ReviewRequests struct {
 							Nodes []struct {
 								RequestedReviewer struct {
@@ -73,6 +84,9 @@ type JSONPullRequest struct {
 	Labels              []string  `json:"labels"`
 	IsDraft             bool      `json:"isDraft"`
 	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
+	Mergeable           string    `json:"mergeable"`
+	ChecksState         string    `json:"checksState"`
 	Reviewers           []string  `json:"reviewers"`
 	Additions           int       `json:"additions"`
 	Deletions           int       `json:"deletions"`
