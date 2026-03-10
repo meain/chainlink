@@ -230,6 +230,22 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 		d.branch[n.HeadRefName] = n.Number
 	}
 
+	// Register base branches that aren't already tracked (e.g. from
+	// merged PRs or long-lived branches like develop/release/*).
+	// These are treated as roots, same as the default branch.
+	// When we hit the 100 PR pagination limit, a missing base may
+	// indicate a truncated chain, so warn in that case.
+	prCount := len(resp.Data.Repository.PullRequests.Edges)
+	for _, p := range resp.Data.Repository.PullRequests.Edges {
+		base := p.Node.BaseRefName
+		if _, ok := d.branch[base]; !ok {
+			if prCount >= 100 {
+				fmt.Fprintf(os.Stderr, "base branch %q missing for #%d, possibly due to pagination limit\n", base, p.Node.Number)
+			}
+			d.branch[base] = 0
+		}
+	}
+
 	for _, p := range resp.Data.Repository.PullRequests.Edges {
 		n := p.Node
 		id := n.Number
@@ -245,12 +261,7 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 			following: following,
 		}
 
-		fl, ok := d.branch[base]
-		if !ok {
-			// This can happen because we only fetch so many PRs
-			// Limited to 100 due to GH limitation for a single page
-			fmt.Fprintf(os.Stderr, "base missing for %d, using %s\n", id, d.defaultBranch)
-		}
+		fl := d.branch[base]
 
 		following = []int{id}
 		if len(d.mappings[fl].following) > 0 {
