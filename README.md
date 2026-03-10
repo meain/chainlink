@@ -7,11 +7,9 @@
 ## Features
 
 - **Log PR chains**: Visualize your PR chains and their dependencies in a clear, hierarchical format.
-  - Use filters to narrow down the list:
-    - `--author <author>`:  See PRs by a specific author.
-    - `--review-status <status>`: Filter by review status (`approved`, `pending`, `all`).
-    - `--labels <label1>,<label2>`: Find PRs with specific labels.
-    - ... (and other filters like `--reviewer`, `--draft-status`, `--age`, `--size`)
+  - `--all` to print all PRs and not just chains.
+  - `--output <format>` to change output format (`default`, `small`, `markdown`, `json`).
+  - Use filters to narrow down the list (see [Filter Options](#filter-options-summary)).
   - Example:
     ```
     $ chainlink log --repo alcionai/corso --author ashmrtn --review-status approved
@@ -19,6 +17,8 @@
 
 - **Open PR chains**: Open an entire PR chain in your browser, in the correct dependency order, with a single command.
   - Select a chain by branch name or PR number.
+  - `--print` to print URLs instead of opening them in the browser.
+  - `--output <format>` to change output format (`default`, `json`).
   - Supports the same filters as `log` to help you find the right chain.
   - Example:
     ```
@@ -28,6 +28,10 @@
 - **Rebase PR chains**:  Rebase a complete PR chain onto `main` (or another branch) to keep your branches up-to-date.
   - Automatically handles the correct rebase order based on PR dependencies.
   - `--push` flag to automatically push rebased branches.
+  - `--args` to customize push arguments (default: `--force-with-lease`).
+  - `--run` to execute the rebase commands directly instead of printing them.
+  - `--shell` to specify the shell for running commands (default: `$SHELL`).
+  - `--output <format>` to change output format (`default`, `json`).
   - Example:
     ```
     $ chainlink rebase 3217-model-mod-time --push
@@ -100,17 +104,26 @@ git rebase --update-refs 3217-model-mod-time
 git push --force-with-lease
 ```
 
+## Global Options
+
+- `--repo <org/repo>`: Repository to operate on (default: current directory's origin).
+- `--no-cache`: Ignore cached data.
+- `--cache-time <duration>`: Cache duration (default: `1m`). Examples: `1m`, `5m`, `1h`.
+
 ## Filter Options Summary
 
 These options are available for both `log` and `open` commands:
 
-- `--author <author>`
-- `--review-status <status>` (`approved`, `pending`, `all`)
-- `--labels <label1>,<label2>`
+- `--author <author>` (prefix with `-` to exclude)
+- `--review-status <status>` (`approved`, `pending`, `unapproved`, `changes-requested`, `all`)
+- `--labels <label1>,<label2>` (prefix with `-` to exclude)
 - `--reviewer <reviewer>`
 - `--draft-status <status>` (`draft`, `ready`, `all`)
-- `--age <duration>` (e.g., `24h`, `7d`)
+- `--updated-since <duration>` (e.g., `24h`, `7d`)
+- `--created-since <duration>` (e.g., `24h`, `7d`)
 - `--size <size>` (`small`, `medium`, `large`, `all`)
+- `--mergeable <status>` (`mergeable`, `conflicting`, `all`)
+- `--checks <status>` (`pass`, `fail`, `pending`, `all`)
 
 ## Alternatives
 
