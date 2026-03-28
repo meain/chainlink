@@ -53,29 +53,23 @@ Use `--print` to print URLs without opening them.
 
 ### `rebase` -- Rebase a PR chain
 
-Generates a shell script that rebases the chain in the correct dependency order:
+Generates a shell script that rebases the chain onto the default branch. Only leaf branches (the tips of the chain) are rebased -- git's `--update-refs` flag automatically updates all intermediate branches:
 
 ```
 $ chainlink rebase 3217-model-mod-time --push
 
 #!/bin/sh
 
-set -ex
-
-git checkout 3217-incomplete-backup-cleanup
-git rebase --update-refs main
-git push --force-with-lease
-
-git checkout 3217-model-mod-time
-git rebase --update-refs 3217-incomplete-backup-cleanup
-git push --force-with-lease
+set -e
 
 git checkout 3217-delay-model-gc
-git rebase --update-refs 3217-model-mod-time
-git push --force-with-lease
+git rebase --update-refs main
+git push --force-with-lease 3217-incomplete-backup-cleanup
+git push --force-with-lease 3217-model-mod-time
+git push --force-with-lease 3217-delay-model-gc
 ```
 
-Use `--run` to execute directly instead of printing. Use `--push` to push after each rebase.
+Use `--run` to execute directly instead of printing. Use `--push` to push all branches in the chain after rebasing.
 
 ## Filters
 
