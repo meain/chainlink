@@ -105,6 +105,23 @@ func generateColor(str string) *color.Color {
 	return color.New(38, 2, color.Attribute(rgb.R*255), color.Attribute(rgb.G*255), color.Attribute(rgb.B*255))
 }
 
+func ciIndicator(state string) string {
+	green := color.New(color.FgGreen).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+
+	switch state {
+	case "success":
+		return green("✓")
+	case "failure", "error":
+		return red("✗")
+	case "pending":
+		return yellow("●")
+	default:
+		return ""
+	}
+}
+
 func formatPRSmall(p pr, url string) string {
 	green := color.New(color.FgGreen).SprintFunc()
 	number := fmt.Sprintf("#%d", p.number)
@@ -113,7 +130,12 @@ func formatPRSmall(p pr, url string) string {
 		number = green(number)
 	}
 
-	line := fmt.Sprintf("%s %s", number, p.title)
+	ci := ciIndicator(p.checksState)
+	if ci != "" {
+		ci = " " + ci
+	}
+
+	line := fmt.Sprintf("%s %s%s", number, p.title, ci)
 
 	return line
 }
@@ -151,15 +173,21 @@ func formatPR(p pr, url string) string {
 		ageStr = fmt.Sprintf("%.0fmo", age.Hours()/24/30)
 	}
 
+	ci := ciIndicator(p.checksState)
+	if ci != "" {
+		ci = " " + ci
+	}
+
 	line := fmt.Sprintf(
-		"\x1b]8;;%s/pull/%d\x07%s\x1b]8;;\x07 %s (%s) [%s] %s ago",
+		"\x1b]8;;%s/pull/%d\x07%s\x1b]8;;\x07 %s (%s) [%s] %s ago%s",
 		url,
 		p.number,
 		number,
 		p.title,
 		author,
 		p.head,
-		ageStr)
+		ageStr,
+		ci)
 
 	return line
 }
