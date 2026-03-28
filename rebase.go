@@ -31,12 +31,32 @@ func rebaseChain(
 		return nil
 	}
 
+	// Find leaf branches (PRs with no children in the chain)
+	prnSet := make(map[int]bool, len(prns))
+	for _, p := range prns {
+		prnSet[p] = true
+	}
+
+	var leaves []int
+	for _, p := range prns {
+		isLeaf := true
+		for _, f := range d.mappings[p].following {
+			if prnSet[f] {
+				isLeaf = false
+				break
+			}
+		}
+		if isLeaf {
+			leaves = append(leaves, p)
+		}
+	}
+
 	lines := []string{"#!/bin/sh", "", "set -e"}
 	commands := []string{}
 
-	for _, p := range prns {
+	for _, p := range leaves {
 		checkoutCmd := fmt.Sprintf("git checkout %s", d.prs[p].head)
-		rebaseCmd := fmt.Sprintf("git rebase --update-refs %s", d.prs[p].base)
+		rebaseCmd := fmt.Sprintf("git rebase --update-refs %s", d.defaultBranch)
 
 		lines = append(
 			lines,
@@ -45,9 +65,11 @@ func rebaseChain(
 			rebaseCmd)
 
 		commands = append(commands, checkoutCmd, rebaseCmd)
+	}
 
-		if push {
-			pushCmd := fmt.Sprintf("git push %s", args)
+	if push {
+		for _, p := range prns {
+			pushCmd := fmt.Sprintf("git push %s %s", args, d.prs[p].head)
 			lines = append(lines, pushCmd)
 			commands = append(commands, pushCmd)
 		}
