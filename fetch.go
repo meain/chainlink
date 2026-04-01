@@ -63,20 +63,40 @@ func getToken() (string, error) {
 	return "", fmt.Errorf("missing GitHub token in CHAINLINK_TOKEN")
 }
 
-func fetchData(org, repo string, cache bool, cacheTime time.Duration) ([]byte, error) {
-	cacheFile := fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
+func cacheFilePath(org, repo string) string {
+	return fmt.Sprintf("%s/%s/%s", CACHE_DIR_BASE, org, repo)
+}
 
-	if cache {
-		if st, err := os.Stat(cacheFile); !os.IsNotExist(err) {
-			if time.Now().Sub(st.ModTime()) < cacheTime {
-				bts, err := os.ReadFile(cacheFile)
-				if err == nil {
-					return bts, nil
-				}
-			}
-		}
+func readCache(org, repo string, cacheTime time.Duration) ([]byte, bool) {
+	cacheFile := cacheFilePath(org, repo)
+	st, err := os.Stat(cacheFile)
+	if os.IsNotExist(err) {
+		return nil, false
 	}
+	if time.Since(st.ModTime()) >= cacheTime {
+		return nil, false
+	}
+	bts, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return nil, false
+	}
+	return bts, true
+}
 
+func writeCache(org, repo string, bts []byte) {
+	cacheFile := cacheFilePath(org, repo)
+	err := os.MkdirAll(filepath.Dir(cacheFile), os.ModePerm)
+	if err != nil {
+		log.Print("Unable to create cache data dir", err)
+		return
+	}
+	err = os.WriteFile(cacheFile, bts, 0644)
+	if err != nil {
+		log.Print("Unable to cache data", err)
+	}
+}
+
+func fetchData(org, repo string) ([]byte, error) {
 	resp, err := makeRequest(org, repo)
 	if err != nil {
 		return nil, err
@@ -84,22 +104,13 @@ func fetchData(org, repo string, cache bool, cacheTime time.Duration) ([]byte, e
 
 	defer resp.Body.Close()
 
-	// Read the response body
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 
 	bts := buf.Bytes()
 
-	err = os.MkdirAll(filepath.Dir(cacheFile), os.ModePerm)
-	if err != nil {
-		log.Print("Unable to create cache data dir", err)
-		return bts, nil
-	}
-
-	err = os.WriteFile(cacheFile, bts, 0644)
-	if err != nil {
-		log.Print("Unable to cache data", err)
-		return bts, nil
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(bts))
 	}
 
 	return bts, nil
@@ -136,22 +147,35 @@ func getData(ctx context.Context, org, repo string, cache bool, cacheTime time.D
 		mappings: map[int]mapping{},
 	}
 
-	response, err := fetchData(org, repo, cache, cacheTime)
-	if err != nil {
-		return d, err
+	var response []byte
+	var fromCache bool
+	if cache {
+		response, fromCache = readCache(org, repo, cacheTime)
+	}
+	if !fromCache {
+		var err error
+		response, err = fetchData(org, repo)
+		if err != nil {
+			return d, err
+		}
 	}
 
 	resp := Response{}
-	err = json.Unmarshal(response, &resp)
+	err := json.Unmarshal(response, &resp)
 	if err != nil {
 		return d, fmt.Errorf("unable to marshal response: %v", err)
 	}
 
 	if len(resp.Errors) > 0 {
 		for _, e := range resp.Errors {
-			fmt.Println(e.Message)
+			fmt.Fprintln(os.Stderr, e.Message)
 		}
 		return d, fmt.Errorf("unable to fetch PRs")
+	}
+
+	// Only cache after confirming the response is valid
+	if !fromCache {
+		writeCache(org, repo, response)
 	}
 
 	d.defaultBranch = resp.Data.Repository.DefaultBranchRef.Name
