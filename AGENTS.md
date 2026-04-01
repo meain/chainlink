@@ -16,6 +16,10 @@ go build -o chainlink .
 go run . <command> [args]
 # or after building:
 ./chainlink <command> [args]
+
+# To test against a specific repo:
+go run . log --repo org/repo
+go run . log --repo org/repo --all  # include standalone PRs
 ```
 
 ### Testing
