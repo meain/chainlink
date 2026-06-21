@@ -97,23 +97,44 @@ func writeCache(org, repo string, bts []byte) {
 }
 
 func fetchData(org, repo string) ([]byte, error) {
+	const maxAttempts = 4
+	backoff := time.Second
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		bts, status, err := tryFetch(org, repo)
+		if err == nil && status == http.StatusOK {
+			return bts, nil
+		}
+
+		retriable := err != nil || status == http.StatusBadGateway || status == http.StatusServiceUnavailable || status == http.StatusGatewayTimeout
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("GitHub API returned status %d: %s", status, string(bts))
+		}
+
+		if !retriable || attempt == maxAttempts {
+			return nil, lastErr
+		}
+
+		fmt.Fprintf(os.Stderr, "transient error (attempt %d/%d): %v; retrying in %s\n", attempt, maxAttempts, lastErr, backoff)
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+	return nil, lastErr
+}
+
+func tryFetch(org, repo string) ([]byte, int, error) {
 	resp, err := makeRequest(org, repo)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-
 	defer resp.Body.Close()
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
-
-	bts := buf.Bytes()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(bts))
-	}
-
-	return bts, nil
+	return buf.Bytes(), resp.StatusCode, nil
 }
 
 func makeRequest(org string, repo string) (*http.Response, error) {
